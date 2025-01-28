@@ -1,0 +1,40 @@
+{
+  "huggingface_models": [
+    "google/electra-base-generator",
+    "albert-base-v2",
+    "distilbert-base-uncased",
+    "gpt2",
+    "bert-base-uncased",
+    "roberta-base",
+    "bert-large-uncased",
+    "roberta-large",
+    "gpt2-large",
+    "google/electra-base-discriminator",
+    "distilroberta-base",
+    "distilgpt2",
+    "google/electra-large-generator",
+    "google/electra-large-discriminator",
+    "albert-large-v2"
+  ],
+  "openai_models": [
+    "text-embedding-3-small",
+    "text-embedding-3-large"
+  ],
+  "pooling": [
+    "mean",
+    "cls"
+  ],
+  "embedding_dir": "embeddings/",
+  "cav_train_config": "experiments/configs/new/config_train_cav_v1.yaml",
+  "cbm_train_config": "experiments/configs/new/config_train_cbm_v1.yaml",
+  "eval_config": "experiments/configs/new/config_eval_v1.yaml",
+  "bias_space_eval_config": "experiments/configs/new/config_bias_space_v1.yaml",
+  "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
+  "results_dir": "experiments/results/new/",
+  "cbm_results_file": "cbm_feature_eval.csv",
+  "bias_space_results_file": "bias_space_feature_eval.csv",
+  "cav_results_file": "cav_feature_eval.csv",
+  "cav_dir": "cavs_new/",
+  "cbm_dir": "cbmodels/",
+  "plot_dir": "experiments/plots/new/"
+}

@@ -1,0 +1,293 @@
+disability:
+  defining_terms:
+  - - - healthy
+      - mentally fit
+      - sane
+      - of sound mind
+      - healthy mind
+      - clearheaded
+      - of sound mind
+      - has eating habits
+      - is slightly worried
+      - has bad memories
+      - normal
+    - - mentally ill
+      - demented
+      - insane
+      - addict
+      - depression
+      - schizophrenia
+      - bipolar
+      - has eating disorder
+      - has anxiety
+      - has ptsd
+      - retarded
+  eval:
+  - dataset: crows_pairs
+    groups:
+    - mental_disability_illness
+    groups_pie:
+    - mental illness
+    local_dir: null
+    suffix: disability
+  - dataset: jigsaw
+    groups:
+    - psychiatric_or_mental_illness
+    groups_pie:
+    - mental illness
+    local_dir: ../../data/jigsaw_bias
+    suffix: disability
+  groups:
+    mental health:
+    - mentally fit
+    - mental illness
+gender:
+  defining_terms:
+  - - - he
+      - his
+      - his
+      - him
+      - himself
+      - man
+      - men
+      - father
+      - son
+      - grandson
+      - sons
+      - brother
+      - brothers
+      - grandfather
+      - grandpa
+      - husband
+      - boy
+      - boys
+      - male
+      - masculine
+      - fathers
+      - grandfathers
+      - grandsons
+      - husbands
+    - - she
+      - her
+      - hers
+      - her
+      - herself
+      - woman
+      - women
+      - mother
+      - daughter
+      - granddaughter
+      - daughters
+      - sister
+      - sisters
+      - grandmother
+      - grandma
+      - wife
+      - girl
+      - girls
+      - female
+      - feminine
+      - mothers
+      - grandmortherss
+      - granddaughters
+      - wives
+  eval:
+  - dataset: bios-supervised
+    groups:
+    - male
+    - female
+    groups_pie:
+    - male
+    - female
+    local_dir: ../../data/bios_huggingface_merge.pkl
+    suffix: null
+  - dataset: jigsaw
+    groups:
+    - male
+    - female
+    groups_pie:
+    - male
+    - female
+    local_dir: ../../data/jigsaw_bias
+    suffix: gender
+  - dataset: crows_pairs
+    groups:
+    - male
+    - female
+    groups_pie:
+    - male
+    - female
+    local_dir: null
+    suffix: gender
+  groups:
+    gender:
+    - male
+    - female
+race:
+  defining_terms:
+  - - - white people
+      - whites
+      - white american
+      - caucasian american
+      - caucasian
+    - - black people
+      - blacks
+      - african american
+      - afro american
+      - african
+    - - asian people
+      - asians
+      - asian american
+      - asian american
+      - asian
+    - - hispanic people
+      - hispanics
+      - latino american
+      - hispanic american
+      - latino
+  eval:
+  - dataset: twitterAAE
+    groups:
+    - aa
+    - white
+    groups_pie:
+    - black
+    - white
+    local_dir: null
+    suffix: null
+  - dataset: jigsaw
+    groups:
+    - white
+    - black
+    - asian
+    - latino
+    groups_pie:
+    - black
+    - white
+    - asian
+    - hispanic
+    local_dir: ../../data/jigsaw_bias
+    suffix: race
+  - dataset: crows_pairs
+    groups:
+    - white
+    - black
+    - asian
+    groups_pie:
+    - black
+    - white
+    - asian
+    local_dir: null
+    suffix: race
+  groups:
+    ethn_us:
+    - white
+    - black
+    - asian
+    - hispanic
+religion:
+  defining_terms:
+  - - - christian
+      - christian
+      - christians
+      - church
+      - chapel
+      - bible
+      - bible
+      - christianity
+      - god
+      - a christian
+      - christmas
+      - easter
+      - catholic
+      - lutheran
+    - - muslim
+      - muslim
+      - muslims
+      - mosque
+      - masjid
+      - quran
+      - quran
+      - islam
+      - allah
+      - a muslim
+      - ramadan
+      - eid al-adha
+      - muslim
+      - muslim
+    - - jewish
+      - jew
+      - jews
+      - synagogue
+      - synagog
+      - tanakh
+      - hebrew bible
+      - judaism
+      - yahweh
+      - a jew
+      - hanukkah
+      - tisha bav
+      - jewish
+      - jewish
+    - - buddhist
+      - buddhist
+      - buddhists
+      - vihara
+      - buddhist temple
+      - buddhist canons
+      - buddhist canons
+      - buddhism
+      - buddha
+      - a buddhist
+      - vesak
+      - parinirvana day
+      - buddhist
+      - buddhist
+    - - hindu
+      - hindu
+      - hindus
+      - mandir
+      - hindu temple
+      - vedas
+      - upanishads
+      - hinduism
+      - hindu deities
+      - a hindu
+      - diwali
+      - makar sankranti
+      - hindu
+      - hindu
+  eval:
+  - dataset: jigsaw
+    groups:
+    - christian
+    - muslim
+    - jewish
+    - buddhist
+    - hindu
+    groups_pie:
+    - christian
+    - muslim
+    - jewish
+    - buddhist
+    - hindu
+    local_dir: ../../data/jigsaw_bias
+    suffix: religion
+  - dataset: crows_pairs
+    groups:
+    - christian
+    - muslim
+    - jewish
+    groups_pie:
+    - christian
+    - muslim
+    - jewish
+    local_dir: null
+    suffix: religion
+  groups:
+    religion:
+    - christian
+    - muslim
+    - jewish
+    - buddhist
+    - hindu
