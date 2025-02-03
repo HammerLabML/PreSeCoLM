@@ -133,7 +133,7 @@ def run_bias_space_eval(config):
     if not os.path.isdir(config['results_dir']):
         os.makedirs(config['results_dir'])
 
-    # config with evaluation setups (datasets, protected attributes and groups...)
+    # config with evaluation setups (data_loader, protected attributes and groups...)
     with open(config['bias_space_eval_config'], 'r') as stream:
         eval_setups_by_attr = yaml.safe_load(stream)
 
@@ -157,7 +157,7 @@ def run_bias_space_eval(config):
         results = pd.DataFrame({key: [] for key in result_keys})
     data_train_str = '/'
 
-    # evaluate bias spaces for the different protected attributes, datasets, models...
+    # evaluate bias spaces for the different protected attributes, data_loader, models...
     # skip those experiments where results are already available
     for attr, params in eval_setups_by_attr.items():
         assert 'eval' in params.keys(), "expected key 'eval' in setup for attr %s" % attr

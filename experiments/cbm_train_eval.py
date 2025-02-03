@@ -47,7 +47,7 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
     if sel_groups is not None:
         assert sel_groups == groups, ("expected %s, instead got %s " % (sel_groups, groups))
 
-    # datasets with binary group labels provide only 1D labels for two groups; adjust label accordingly
+    # data_loader with binary group labels provide only 1D labels for two groups; adjust label accordingly
     # in this case, group labels will be learned as single label and are converted to multi-label for evaluation
     if len(groups) == 2 and (g_test.ndim == 1 or g_test.shape[1] == 1):
         groups = [groups[0] + '/' + groups[1]]
@@ -65,7 +65,7 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
         y_train = y_train.flatten().astype('int')
         y_test = y_test.flatten().astype('int')
 
-    # some datasets do not have a training split
+    # some data_loader do not have a training split
     if len(g_train) == 0 or len(y_train) == 0:
         print("got no training data to fit CBM")
         return
@@ -198,7 +198,7 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     return f1, corr, groups_train_ordered, groups_test
 
 def run_cbm_training(config):
-    # config with training setups (datasets, selected groups...)
+    # config with training setups (data_loader, selected groups...)
     with open(config["cbm_train_config"], 'r') as stream:
         training_setups = yaml.safe_load(stream)
 
@@ -224,7 +224,7 @@ def run_cbm_training(config):
             pooling_choices = ['']
         for pool in pooling_choices:
             for setup in training_setups:
-                # these datasets do not have a classification labels, so a CBM cannot be trained
+                # these data_loader do not have a classification labels, so a CBM cannot be trained
                 if setup['dataset'] in ['twitterAAE', 'crows_pairs']:
                     continue
                 train_cbms(setup['dataset'], model, pool, batch_size, config["embedding_dir"], config["cbm_dir"], plot_dir=config["plot_dir"],
@@ -235,7 +235,7 @@ def run_cbm_eval(config):
     if not os.path.isdir(config['results_dir']):
         os.makedirs(config['results_dir'])
 
-    # config with evaluation setups (datasets, protected attributes and groups...)
+    # config with evaluation setups (data_loader, protected attributes and groups...)
     with open(config['eval_config'], 'r') as stream:
         eval_setups_by_attr = yaml.safe_load(stream)
     with open(config['cbm_train_config'], 'r') as stream:
@@ -259,7 +259,7 @@ def run_cbm_eval(config):
     else:
         results_cbm = pd.DataFrame({key: [] for key in result_keys_cbm})
 
-    # evaluate CBMs for the different protected attributes, datasets, models...
+    # evaluate CBMs for the different protected attributes, data_loader, models...
     # skip those experiments where results are already available
     for attr, eval_setups in eval_setups_by_attr.items():
         for model in models:
@@ -273,7 +273,7 @@ def run_cbm_eval(config):
 
             for pool in pooling_choices:
                 for train_setup in train_setups:
-                    # these datasets do not have a classification labels, so a CBM cannot be trained
+                    # these data_loader do not have a classification labels, so a CBM cannot be trained
                     if train_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
                         continue
                     if model == 'text-embedding-3-large' and train_setup['dataset'] in ['jigsaw', 'twitterAAE']: # TODO remove later

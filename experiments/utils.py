@@ -196,7 +196,7 @@ def eval_with_label_match(y_test, y_pred, pred, label_test, label_pred, average=
     # align predictions and test labels:
     # there might be more predicted groups than test groups
     # the order of groups might be different
-    # some datasets use different labels for the same group
+    # some data_loader use different labels for the same group
     if len(label_test) < len(label_pred):
         # got predictions for more groups than available in test data
         # reduce pred to match the number of test groups (minding the order of groups!)

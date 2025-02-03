@@ -14,7 +14,10 @@ import random
 import scipy
 from sklearn.metrics import f1_score, precision_score, recall_score
 
-from pie_data import get_dataset, label2onehot
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from data_loader import get_dataset, label2onehot
 from models import CAV
 import plotting
 import utils
@@ -40,7 +43,7 @@ def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=
         print("expecting ", sel_groups)
         assert sel_groups == groups, "expected these groups: %s, instead got: %s" % (sel_groups, groups)
 
-    # datasets with binary group labels provide only 1D labels for two groups; adjust label accordingly
+    # data_loader with binary group labels provide only 1D labels for two groups; adjust label accordingly
     # in this case, group labels will be learned as single label and are converted to multi-label for evaluation
     if len(groups) == 2 and (g_test.ndim == 1 or g_test.shape[1] == 1):
         groups = [groups[0]+'/'+groups[1]]
@@ -50,7 +53,7 @@ def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=
     
     cav = CAV()
     if len(g_train) == 0:
-        # some datasets only have test data, train on test data for cross dataset transfer
+        # some data_loader only have test data, train on test data for cross dataset transfer
         # testing on same dataset should not be done
         cav.fit(emb_test, g_test)
     else:
@@ -132,7 +135,7 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
 
 
 def run_cav_training(config):
-    # config with training setups (datasets, selected groups...)
+    # config with training setups (data_loader, selected groups...)
     with open(config["cav_train_config"], 'r') as stream:
         training_setups = yaml.safe_load(stream)
 
@@ -165,7 +168,7 @@ def run_cav_eval(config):
     if not os.path.isdir(config['results_dir']):
         os.makedirs(config['results_dir'])
 
-    # config with evaluation setups (datasets, protected attributes and groups...)
+    # config with evaluation setups (data_loader, protected attributes and groups...)
     with open(config['eval_config'], 'r') as stream:
         eval_setups_by_attr = yaml.safe_load(stream)
 
@@ -187,7 +190,7 @@ def run_cav_eval(config):
     else:
         results_cav = pd.DataFrame({key: [] for key in result_keys_cav})
 
-    # evaluate CAVs for the different protected attributes, datasets, models...
+    # evaluate CAVs for the different protected attributes, data_loader, models...
     # skip those experiments where results are already available
     for attr, eval_setups in eval_setups_by_attr.items():
         for model in models:

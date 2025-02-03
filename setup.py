@@ -10,6 +10,6 @@ setup(name='presecolm',
       version=version,
       description='Experiment setup to evaluate the prediction of sensitive concepts in language models.',
       url='https://github.com/HammerLabML/PreSeCoLM',
-      packages=['datasets','models'],
+      packages=['data_loader','models'],
       install_requires=INSTALL_REQUIRES,
       )
