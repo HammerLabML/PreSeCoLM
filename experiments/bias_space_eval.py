@@ -1,22 +1,21 @@
 import os
 import sys
 import json
-import pickle
-from tqdm import tqdm
 import pandas as pd
 import yaml
 
 import functools
 import getopt
 import numpy as np
-import math
-import random
 import scipy
-from sklearn.metrics import f1_score, precision_score, recall_score
 
-from pie_data import get_dataset, label2onehot
+# local imports
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import data_loader
 import plotting
 import utils
+
 
 class BiasSpaceModel():
 
@@ -47,7 +46,7 @@ class BiasSpaceModel():
             print(self.attr_mean(attribute_sets[0]).shape)
             bias_components = np.asarray([self.attr_mean(attribute_sets[i]) - np.mean([self.attr_mean(attribute_sets[j]) for j in range(0,n) if j != i], axis=0) for i in range(0,n)])
         return self.normalize(bias_components)
-    
+
     def stack_bias_spaces(self, bias_spaces : list, labels: dict):
         assert len(bias_spaces)==len(labels)
 
@@ -70,12 +69,13 @@ class BiasSpaceModel():
         protected_features = utils.get_features(X, self.B)
         return protected_features
 
+
 def evaluate_bias_space(defining_terms, attribute_dict, dataset_test, model, pooling, batch_size, emb_dir, plot_dir, file_prefix, local_dir=None, sel_groups_eval=None, sel_groups_bias_space=None):
     _, _, _, _, X_test, emb_test, y_test, g_test, groups, emb_defining_attr, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, defining_terms=defining_terms, sel_groups=sel_groups_eval)
     bias_space = BiasSpaceModel()
     bias_space.fit(emb_defining_attr, attribute_dict)
     #B = bias_space.get_concept_vectors()
-    feature_lbl = bias_space.lbl# [lbl.split(':')[1] for lbl in ccm.lbl
+    feature_lbl = bias_space.lbl
 
     if sel_groups_bias_space is None:
         sel_groups_bias_space = feature_lbl
@@ -84,7 +84,7 @@ def evaluate_bias_space(defining_terms, attribute_dict, dataset_test, model, poo
 
     if utils.is1D(g_test) and len(sel_groups_eval) > 1:
         print("convert 1d test labels to onehot")
-        g_test = label2onehot(g_test)
+        g_test = data_loader.label2onehot(g_test)
         assert len(sel_groups_eval) == g_test.shape[1]
 
     print(sel_groups_eval)

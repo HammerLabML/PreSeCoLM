@@ -10,28 +10,37 @@ import matplotlib.pyplot as plt
 import functools
 import getopt
 import numpy as np
-import math
-import random
 import scipy
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score
 
 import torch
 
-from pie_data import get_dataset, label2onehot
-from models import CBM, CBMWrapper
+# local imports
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import data_loader
+import models
 import plotting
 import utils
 
 
 def get_cbm_savefile(cbm_dir, dataset, model, pooling, file_suffix=None):
-    model = model.replace('/','_')
+    model = model.replace('/', '_')
     if file_suffix is not None:
-        checkpoint_file = cbm_dir + ("%s_%s_%s" % (dataset, model, pooling)) + file_suffix
-        params_file = cbm_dir + ("%s_%s" % (dataset, model)) + file_suffix
+        checkpoint_file = cbm_dir + ("%s_%s_%s_%s" % (dataset, model, pooling, file_suffix))
+        params_file = cbm_dir + ("%s_%s_%s.pickle" % (dataset, model, file_suffix))
     else:
         checkpoint_file = cbm_dir + ("%s_%s_%s" % (dataset, model, pooling))
-        params_file = cbm_dir + ("%s_%s" % (dataset, model))
+        params_file = cbm_dir + ("%s_%s.pickle" % (dataset, model))
+
+    # avoid unnecessary underscores
+    params_file = params_file.replace('__', '_').replace('_.pickle', '.pickle')
+    checkpoint_file = checkpoint_file.replace('__', '_')
+    if checkpoint_file.endswith('_'):
+        checkpoint_file = checkpoint_file[:-1]
+
     return checkpoint_file, params_file
+
 
 def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, local_dir=None, sel_groups=None, file_suffix=None, lambda_concept=0.5, use_concept_weights=False, lr=1e-4, epochs=80):
     # check if checkpoint for this CBM exists already
@@ -39,6 +48,8 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
     if os.path.isfile(checkpoint_file) and os.path.isfile(params_file):
         print("cbm checkpoint and parameter file for %s, %s, %s, %s already exists" % (dataset, model, pooling, file_suffix))
         return
+    else:
+        print("checkpoint and/ or parameter file not found: %s, %s" % (checkpoint_file, params_file))
 
     # get data and embeddings
     X_train, emb_train, y_train, g_train, X_test, emb_test, y_test, g_test, groups, _, class_weights = utils.get_dataset_and_embeddings(emb_dir, dataset, model, pooling, batch_size, local_dir, sel_groups=sel_groups)
@@ -72,19 +83,19 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
 
     # compute concept weights, prepare concept labels
     if use_concept_weights:
-        concept_weights = compute_class_weights(g_train, sel_groups)
+        concept_weights = data_loader.compute_class_weights(g_train, sel_groups)
     else:
         concept_weights = None
-    c_train = label2onehot(g_train)
-    c_test = label2onehot(g_test)
+    c_train = data_loader.label2onehot(g_train)
+    c_test = data_loader.label2onehot(g_test)
 
     # init model params
     model_params = {'input_size': emb_train.shape[1], 'output_size': n_classes, 'n_learned_concepts': c_train.shape[1], 'n_other_concepts': emb_train.shape[1]-c_train.shape[1], 'hidden_size': 300}
     print("train CBM with params:")
     print(model_params)
     
-    cbm = CBM(**model_params)
-    cbmWrapper = CBMWrapper(cbm, batch_size=32, class_weights=class_weights, criterion=criterion, 
+    cbm = models.CBM(**model_params)
+    cbmWrapper = models.CBMWrapper(cbm, batch_size=32, class_weights=class_weights, criterion=criterion,
                             concept_criterion=torch.nn.BCEWithLogitsLoss, lr=lr, lambda_concept=lambda_concept, concept_weights=concept_weights)
 
     # train and remember class/ concept scores for each epoch
@@ -138,22 +149,28 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     n_classes, multi_label = utils.get_number_of_classes(y_test)
 
     # concepts encoded as onehot
-    c_test = label2onehot(g_test)
+    if len(groups_test) == 1:
+        assert np.all((g_test == 0) | (g_test == 1)), "got only 1 label, but g_test contains multi-class label!"
+        c_test = g_test
+        n_concepts = 1
+    else:
+        c_test = data_loader.label2onehot(g_test)
+        n_concepts = c_test.shape[1]
 
     # with onehot encoding number of test groups and shape of test concepts should match
     # the number of training groups might be larger
-    assert c_test.shape[1] <= len(sel_groups_train) and c_test.shape[1] == len(groups_test)
+    assert n_concepts <= len(sel_groups_train) and n_concepts == len(groups_test)
 
     # load model and parameters
     with open(params_file, "rb") as handle:
         model_params = pickle.load(handle)
         
-    cbm = CBM(**model_params)
+    cbm = models.CBM(**model_params)
     with open(checkpoint_file, "rb") as handle:
         cbm.load_state_dict(torch.load(checkpoint_file, weights_only=True))
         
     # wrapper only needed for predict call, most params don't matter
-    cbmWrapper = CBMWrapper(cbm, batch_size=32, class_weights=None, criterion=torch.nn.BCEWithLogitsLoss, 
+    cbmWrapper = models.CBMWrapper(cbm, batch_size=32, class_weights=None, criterion=torch.nn.BCEWithLogitsLoss,
                             concept_criterion=torch.nn.BCEWithLogitsLoss, lr=1e-4, lambda_concept=0.5, concept_weights=None)
 
     # get concept predictions
@@ -163,12 +180,12 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     # handle different dimensionality of test and predicted ocncepts
     if not utils.is1D(c_test) and utils.is1D(c_pred):
         print("convert 1d prediction to onehot")
-        c_pred = label2onehot(c_pred, minv=int(np.min(c_test)), maxv=int(np.max(c_test)))
+        c_pred = data_loader.label2onehot(c_pred, minv=int(np.min(c_test)), maxv=int(np.max(c_test)))
         concepts = np.hstack([-concepts, concepts])
         assert len(sel_groups_train) == 2
     if utils.is1D(c_test) and not utils.is1D(c_pred):
         print("convert 1d test labels to onehot")
-        c_test = label2onehot(c_test)
+        c_test = data_loader.label2onehot(c_test)
 
     # evaluate the concept predictions
     # if test and train labels do not exactly match, this can be handled by utils.eval_with_label_match
@@ -196,6 +213,7 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     plotting.plot_feature_histogram(concepts, c_test, labels=groups_test, features=sel_groups_train, xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
 
     return f1, corr, groups_train_ordered, groups_test
+
 
 def run_cbm_training(config):
     # config with training setups (data_loader, selected groups...)
@@ -229,6 +247,7 @@ def run_cbm_training(config):
                     continue
                 train_cbms(setup['dataset'], model, pool, batch_size, config["embedding_dir"], config["cbm_dir"], plot_dir=config["plot_dir"],
                            local_dir=setup['local_dir'], sel_groups=setup['groups'], file_suffix=setup['suffix'])
+
 
 def run_cbm_eval(config):
     # prepare directory where results will be saved
@@ -349,6 +368,7 @@ def main(argv):
 
     run_cbm_training(config)
     run_cbm_eval(config)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

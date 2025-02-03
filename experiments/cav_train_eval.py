@@ -2,23 +2,21 @@ import os
 import sys
 import json
 import pickle
-from tqdm import tqdm
 import pandas as pd
 import yaml
 
 import functools
 import getopt
 import numpy as np
-import math
-import random
 import scipy
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score
 
+# local imports
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+import data_loader
+import models
 
-from data_loader import get_dataset, label2onehot
-from models import CAV
 import plotting
 import utils
 
@@ -26,10 +24,14 @@ import utils
 def get_cav_savefile(cav_dir, dataset, model, pooling, file_suffix=None):
     model = model.replace('/','_')
     if file_suffix is not None:
-        file_name = cav_dir + ("%s_%s_%s" % (dataset, model, pooling)) + file_suffix + ".pickle"
+        file_name = cav_dir + ("%s_%s_%s_%s.pickle" % (dataset, model, pooling, file_suffix))
     else:
-        file_name = cav_dir + ("%s_%s_%s" % (dataset, model, pooling)) + ".pickle"
+        file_name = cav_dir + ("%s_%s_%s.pickle" % (dataset, model, pooling))
+
+    # avoid unnecessary underscores
+    file_name = file_name.replace('__', '_')
     return file_name
+
 
 def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=None, sel_groups=None, file_suffix=None):
     file_name = get_cav_savefile(cav_dir, dataset, model, pooling, file_suffix)
@@ -51,7 +53,7 @@ def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=
     print("fit CAV for %s, %s, %s (%s)" % (dataset, model, pooling, file_suffix))
     print("with groups ", groups)
     
-    cav = CAV()
+    cav = models.CAV()
     if len(g_train) == 0:
         # some data_loader only have test data, train on test data for cross dataset transfer
         # testing on same dataset should not be done
@@ -64,6 +66,7 @@ def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=
     save_dict = {'cavs': cavs, 'labels': groups}
     with open(file_name, "wb") as handle:
         pickle.dump(save_dict, handle)
+
 
 def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_dir, cav_dir, plot_dir, local_dir=None, sel_groups_train=None, sel_groups_test=None, file_suffix=None):
     file_name = get_cav_savefile(cav_dir, dataset_train, model, pooling, file_suffix)
@@ -94,16 +97,18 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     # real valued predictions changed to [-pred, pred]
     if not utils.is1D(g_test) and utils.is1D(g_pred):
         print("convert 1d prediction to onehot")
-        g_pred = label2onehot(g_pred, minv=int(np.min(g_test)), maxv=int(np.max(g_test)))
+        g_pred = data_loader.label2onehot(g_pred, minv=int(np.min(g_test)), maxv=int(np.max(g_test)))
         pred = np.hstack([-pred, pred])
         assert len(sel_groups_train) == 2
     if utils.is1D(g_test) and not utils.is1D(g_pred):
         print("convert 1d test labels to onehot")
-        g_test = label2onehot(g_test)
+        g_test = data_loader.label2onehot(g_test)
         assert len(groups_test) == 2
-    if utils.is1D(g_test) and  utils.is1D(g_pred):
-        sel_groups_train = ["%s/%s" % (sel_groups_train[0], sel_groups_train[1])]
-        groups_test = ["%s/%s" % (groups_test[0], groups_test[1])]
+    if utils.is1D(g_test) and utils.is1D(g_pred):
+        if len(sel_groups_train) == 2:
+            sel_groups_train = ["%s/%s" % (sel_groups_train[0], sel_groups_train[1])]
+        if len(groups_test) == 2:
+            groups_test = ["%s/%s" % (groups_test[0], groups_test[1])]
 
     # evaluate the concept activations
     # if test and train labels do not exactly match, this can be handled by utils.eval_with_label_match
@@ -162,6 +167,7 @@ def run_cav_training(config):
         for pool in pooling_choices:
             for setup in training_setups:
                 train_cavs(setup['dataset'], model, pool, batch_size, config["embedding_dir"], config["cav_dir"], local_dir=setup['local_dir'], sel_groups=setup['groups'], file_suffix=setup['suffix'])
+
 
 def run_cav_eval(config):
     # prepare directory where results will be saved
@@ -230,7 +236,7 @@ def run_cav_eval(config):
                                                                            eval_setup['dataset'], model, pool, group,
                                                                            group, f1, corr.statistic, corr.pvalue]
                             else:
-                                assert len(groups_train) == len(corr.statistic), ("list of groups and correlation results do not match: %i / %i" % (len(groups_eval_order), len(corr.statistic)))
+                                assert len(groups_train) == len(corr.statistic), ("list of groups and correlation results do not match: %i / %i" % (len(groups_eval), len(corr.statistic)))
                                 # save results to dataframe (one row per group)
                                 for i, group in enumerate(groups_train):
                                     results_cav.loc[len(results_cav.index)] = [attr, train_setup['dataset'],
@@ -261,6 +267,7 @@ def main(argv):
 
     run_cav_training(config)
     run_cav_eval(config)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
