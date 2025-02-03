@@ -18,7 +18,7 @@
     "mean",
     "cls"
   ],
-  "embedding_dir": "embeddings/",
+  "embedding_dir": "../../artifacts/embeddings/",
   "cav_train_config": "experiments/configs/esann25/config_train_cav_v1.yaml",
   "cbm_train_config": "experiments/configs/esann25/config_train_cbm_v1.yaml",
   "eval_config": "experiments/configs/esann25/config_eval_v1.yaml",
@@ -28,7 +28,7 @@
   "cbm_results_file": "cbm_feature_eval.csv",
   "bias_space_results_file": "bias_space_feature_eval.csv",
   "cav_results_file": "cav_feature_eval.csv",
-  "cav_dir": "cavs/",
-  "cbm_dir": "cbmodels/",
+  "cav_dir": "../../artifacts/cavs/",
+  "cbm_dir": "../../artifacts/cbmodels/",
   "plot_dir": "experiments/plots/esann25"
 }
