@@ -8,7 +8,18 @@ It includes the code to reproduce the papers:
 
 ## Installation
 
-TODO
+Create and activate conda environment:
+```commandline
+conda env create -f env.yml
+conda activate presecolm
+```
+
+Install our Wrapper for Huggingface Embeddings:
+```commandline
+git clone https://github.com/UBI-AGML-NLP/Embeddings.git
+cd Embeddings/
+pip install .
+```
 
 ## Experiment Details
 
