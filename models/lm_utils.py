@@ -3,7 +3,6 @@ import pickle
 import numpy as np
 
 import torch
-from torch.utils.data import TensorDataset, DataLoader
 from embedding import BertHuggingface
 from sklearn.metrics import f1_score, precision_score, recall_score
 
@@ -31,12 +30,14 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir):
             pickle.dump(embeddings, handle)
     return embeddings
 
+
 def get_pretrained_model(model_name, n_classes, batch_size=1, pooling='mean', multi_label=False):    
     if multi_label: 
         lm = BertHuggingface(n_classes, model_name=model_name, batch_size=batch_size, pooling=pooling, loss_function=torch.nn.BCEWithLogitsLoss)
     else:
         lm = BertHuggingface(n_classes, model_name=model_name, batch_size=batch_size, pooling=pooling)
     return lm
+
 
 def get_pretrained_model_with_batch_size_lookup(model_name, n_classes, batch_size_lookup, pooling='mean', multi_label=False):
     if not model_name in batch_size_lookup.keys():
@@ -47,6 +48,7 @@ def get_pretrained_model_with_batch_size_lookup(model_name, n_classes, batch_siz
     
     lm = get_pretrained_model(model_name, n_classes, batch_size=batch_size, pooling=pooling, multi_label=multi_label)
     return lm
+
 
 def get_finetuned_model(model_name, dataset_name, batch_size_lookup, n_classes, multi_label, X_train, y_train, X_test=None, y_test=None, pooling='mean', epochs=5, run_eval=False):
     if run_eval:
@@ -76,7 +78,8 @@ def get_finetuned_model(model_name, dataset_name, batch_size_lookup, n_classes, 
         print("finetuned LM (%s) achieved F1=%.2f, Recall=%.2f, Precision=%.2f on the test set" % (model_name, f1, recall, precision))
 
     return lm
-    
+
+
 # openai models
 
 def get_embeddings(texts, dataset_name, split, embedding_model, emb_dir):
@@ -91,6 +94,7 @@ def get_embeddings(texts, dataset_name, split, embedding_model, emb_dir):
         print("tried to load embeddings from %s, but the file doesn't exist" % save_file)
         return None
     return embeddings.astype(np.float32)
+
 
 def get_defining_term_embeddings(defining_terms, embedding_model, emb_dir):
     dict_path = (emb_dir+'word_phrase_dict_%s.pickle' % embedding_model)

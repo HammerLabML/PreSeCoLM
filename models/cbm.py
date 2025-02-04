@@ -1,22 +1,11 @@
-import os
-import sys
-import json
-import pickle
-
-import matplotlib.pyplot as plt
-import seaborn as sns
 from tqdm import tqdm
 
 import numpy as np
-import math
-import random
-import scipy
 
-from pie_data import get_dataset
-from .classifier import Classifier, LinearClassifier, BertLikeClassifier, ClfWrapper
-import transformers
+from .classifier import Classifier, LinearClassifier
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+
 
 class CBM(torch.nn.Module):
     # the model transforms the input activations through two concept layers:
