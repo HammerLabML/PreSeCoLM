@@ -48,20 +48,7 @@ The setup (i.e. which datasets, protected groups and defining terms are used) is
 
 
 ### ESANN 2025 Experiments
-The configs for the experiments of the ESANN 2025 paper can be found at `experiments/config/esann25/`.
-
-Before running the experiments, the config should be adapted (directories) and the embeddings of OpenAI models need to be computed via `get_openai_embeddings.ipynb`. If you do not have an API Key, you need to exclude the models from the config.  
-
-To reproduce results, run the following python scripts. Computing the embeddings for all language models and training CAV and CBM models may take a while. The embeddings, CBM checkpoints and CAV predictions will be saved to the directories specified in `experiments/configs/esann25/experiment_config.json`. Make sure to adapt the paths and that sufficient space is available.  
-The scripts are not intended to be run in parallel. This might lead to unnecessary computation of embeddings.
-
-```commandline
-python3 experiments/bias_space_eval.py -c experiments/configs/esann25/experiment_config.json
-python3 experiments/cav_train_eval.py -c experiments/configs/esann25/experiment_config.json
-python3 experiments/cbm_train_eval.py -c experiments/configs/esann25/experiment_config.json
-```
-   
-Then use the jupyter-notebook `experiments/protected_feature_eval.ipynb` to process the results and create the plots from the paper.
+See the [esann25 branch](https://github.com/HammerLabML/PreSeCoLM/tree/esann25).
 
 ## Cite this
 TODO
