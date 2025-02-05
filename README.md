@@ -85,7 +85,7 @@ No pre-processing done.
 
 ### Distribution of Protected Groups
 
-The next table shows the protected groups considered in our experiment per dataset. We tested cross-dataset transfer for any combination of datasets that shared the respective protected attributes (and omitted groups that were only present in one). For the distribution of protected groups in the datasets, see [this notebook](https://github.com/HammerLabML/PreSeCoLM/blob/main/experiments/data_stats.ipynb).
+The next table shows the protected groups considered in our experiment per dataset. We tested cross-dataset transfer for any combination of datasets that shared the respective protected attributes (and omitted groups that were only present in one). For the distribution of protected groups in the datasets, see [this notebook](https://github.com/HammerLabML/PreSeCoLM/blob/esann25/experiments/data_stats.ipynb).
 
 |             | Gender       | Ethnicity                   | Religion                                   | Disability                 |
 |-------------|--------------|-----------------------------|--------------------------------------------|----------------------------|
