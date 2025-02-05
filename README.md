@@ -36,7 +36,7 @@ pip install .
 ### Concept Prediction Methods
 - Concept Activation Vectors (CAV)
 - Concept Bottleneck Models (CBM)
-- Bias Subspaces (refering to semantic bias scores [1][2], our implementation is based on [1])
+- Bias Subspaces (referring to semantic bias scores [1][2], our implementation is based on [1])
 
 ### Experiment Setup
 To run the experiments, a config file (json), such as `experiments/config/esann25/experiment_config.json`, must be passed. It specifies the models, locations of other relevant configs, where to save embeddings, CAVs, checkpoints of CBMs, plots and results.  
