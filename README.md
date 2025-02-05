@@ -60,10 +60,10 @@ The experiments cover the datasets given in the table below.
 
 | Dataset     | Samples | Task                             | Data Splits (for training / eval) | Label type           |
 |-------------|---------|----------------------------------|-----------------------------------|----------------------|
-| BIOS        | 10563   | job classification (10 classes)  | train / test + dev                | binary, single label |
-| Jigsaw      | 375895  | toxicity classification (binary) | train / test_public_leaderboard   | binary, multi label  |
-| CrowS-Pairs | 3016    | Masked Language Modeling         | - / test                          | binary, multi label  |
-| TwitterAAE  | 100000  | /                                | - / test                          | binary, single label |
+| BIOS        | 10,563  | job classification (10 classes)  | train / test + dev                | binary, single label |
+| Jigsaw      | 375,895 | toxicity classification (binary) | train / test_public_leaderboard   | binary, multi label  |
+| CrowS-Pairs | 3,016   | Masked Language Modeling         | - / test                          | binary, multi label  |
+| TwitterAAE  | 100,000 | /                                | - / test                          | binary, single label |
 
 All datasets are downloaded from Huggingface Datasets and we use the respective data splits, but due to pre-processing some datasets are reduced to a smaller subset. The number of samples in the table refers to the total number of samples (train+test) used in the experiment.
 
@@ -87,12 +87,12 @@ No pre-processing done.
 
 The next table shows the protected groups considered in our experiment per dataset. We tested cross-dataset transfer for any combination of datasets that shared the respective protected attributes (and omitted groups that were only present in one). For the distribution of protected groups in the datasets, see [this notebook](https://github.com/HammerLabML/PreSeCoLM/blob/main/experiments/data_stats.ipynb).
 
-|             | Gender       | Ethnicity                         | Religion                                   | Disability                 |
-|-------------|--------------|-----------------------------------|--------------------------------------------|----------------------------|
-| BIOS        | male, female | /                                 | /                                          | /                          |
-| Jigsaw      | male, female | white, black, asian, latino       | christian, muslim, jewish, buddhist, hindu | mental illness             |
-| CrowS-Pairs | male, female | white, black, asian               | christian, muslim, jewish                  | mental illness/ disability |
-| TwitterAAE  | /            | african american english (50,000) | /                                          | /                          |
+|             | Gender       | Ethnicity                   | Religion                                   | Disability                 |
+|-------------|--------------|-----------------------------|--------------------------------------------|----------------------------|
+| BIOS        | male, female | /                           | /                                          | /                          |
+| Jigsaw      | male, female | white, black, asian, latino | christian, muslim, jewish, buddhist, hindu | mental illness             |
+| CrowS-Pairs | male, female | white, black, asian         | christian, muslim, jewish                  | mental illness/ disability |
+| TwitterAAE  | /            | african american english    | /                                          | /                          |
 
 
 
