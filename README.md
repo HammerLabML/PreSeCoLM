@@ -68,19 +68,19 @@ The experiments cover the datasets given in the table below.
 All datasets are downloaded from Huggingface Datasets and we use the respective data splits, but due to pre-processing some datasets are reduced to a smaller subset. The number of samples in the table refers to the total number of samples (train+test) used in the experiment.
 
 #### BIOS
-For the BIOS dataset, we reduce it to a supervised subset from [3] using [this Repo](https://github.com/HammerLabML/MeasuringFairnessWithBiasedData).
+For the BIOS dataset, we reduce it to a supervised subset from [3] using [this Repo](https://github.com/HammerLabML/MeasuringFairnessWithBiasedData).  
 [Huggingface Link](https://huggingface.co/datasets/LabHC/bias_in_bios)
 
 #### Jigsaw
-We filter for samples where a 2/3 majority of annotators agrees on all the identity labels (0 or 1). In the experiments we further use a subset of protected groups (see next table) that had a sufficiently large amount of samples.
+We filter for samples where a 2/3 majority of annotators agrees on all the identity labels (0 or 1). In the experiments we further use a subset of protected groups (see next table) that had a sufficiently large amount of samples.  
 [Huggingface Link](https://huggingface.co/datasets/google/jigsaw_unintended_bias)
 
 #### CrowS-Pairs
-We focus on the most frequent identity labels and protected attributes that are available in the other datasets for cross-dataset transfer.
+We focus on the most frequent identity labels and protected attributes that are available in the other datasets for cross-dataset transfer.  
 [Huggingface Link](https://huggingface.co/datasets/nyu-mll/crows_pairs)
 
 #### TwitterAAE
-No pre-processing done.
+No pre-processing done.  
 [Huggingface Link](https://huggingface.co/datasets/lighteval/TwitterAAE)
 
 ### Distribution of Protected Groups
@@ -123,5 +123,6 @@ TODO
 
 ## References
 
-[1] "The SAME score: Improved cosine based bias score for word embeddings", [Arxiv](https://arxiv.org/abs/2203.14603) Paper, [IEEE IJCNN](https://ieeexplore.ieee.org/abstract/document/10651275/) Paper  
-[2] "Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings", [Arxiv](https://arxiv.org/abs/1607.06520) Paper, [NIPS](https://proceedings.neurips.cc/paper_files/paper/2016/file/a486cd07e4ac3d270571622f4f316ec5-Paper.pdf) Paper
+[1] "The SAME score: Improved cosine based bias score for word embeddings", [Arxiv Paper](https://arxiv.org/abs/2203.14603), [Conference Paper](https://ieeexplore.ieee.org/abstract/document/10651275/)    
+[2] "Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings", [Arxiv Paper](https://arxiv.org/abs/1607.06520), [Conference Paper](https://proceedings.neurips.cc/paper_files/paper/2016/file/a486cd07e4ac3d270571622f4f316ec5-Paper.pdf)    
+[3] "Measuring fairness with biased data: A case study on the effects of unsupervised data in fairness evaluation.", [Conference Paper](https://link.springer.com/chapter/10.1007/978-3-031-43085-5_11)  
