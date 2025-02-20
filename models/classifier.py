@@ -125,9 +125,9 @@ class ClfWrapper:
                 del batch_y
         torch.cuda.empty_cache()
 
-    def predict(self, X, verbose=False, batch_size=64):
+    def predict(self, X, verbose=False):
         dataset = TensorDataset(torch.tensor(X))
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
         predictions = []
 
         if verbose:
