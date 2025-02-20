@@ -21,22 +21,8 @@ cd Embeddings/
 pip install .
 ```
 
+
 ## Experiment Details
-
-### Currently Used Datasets
-- BIOS
-- TwitterAAE
-- Jigsaw Unintended Bias
-- CrowSPairs
-
-### Currently Supported Language Models
-- Huggingface Models (using this [Wrapper](https://github.com/UBI-AGML-NLP/Embeddings))
-- OpenAI Embedding Models
-
-### Concept Prediction Methods
-- Concept Activation Vectors (CAV)
-- Concept Bottleneck Models (CBM)
-- Bias Subspaces (refering to semantic bias scores [1][2], our implementation is based on [1])
 
 ### Experiment Setup
 To run the experiments, a config file (json), such as `experiments/config/esann25/experiment_config.json`, must be passed. It specifies the models, locations of other relevant configs, where to save embeddings, CAVs, checkpoints of CBMs, plots and results.  
@@ -46,9 +32,9 @@ The setup (i.e. which datasets, protected groups and defining terms are used) is
 - `eval_config`: specifies the datasets and protected groups for evaluation of CAV and CBM (sorted by protected attribute; can include datasets without training split and/or class labels)
 - `bias_space_eval_config`: specifies the evaluation setup for bias subspaces (sorted by protected attribute; includes both defining terms for bias subpsaces and a list of datasets/ protected groups for eval)
 
-
 ### ESANN 2025 Experiments
 See the [esann25 branch](https://github.com/HammerLabML/PreSeCoLM/tree/esann25).
+
 
 ## Cite this
 TODO
@@ -57,5 +43,6 @@ TODO
 
 ## References
 
-[1] "The SAME score: Improved cosine based bias score for word embeddings", [Arxiv](https://arxiv.org/abs/2203.14603) Paper, [IEEE IJCNN](https://ieeexplore.ieee.org/abstract/document/10651275/) Paper  
-[2] "Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings", [Arxiv](https://arxiv.org/abs/1607.06520) Paper, [NIPS](https://proceedings.neurips.cc/paper_files/paper/2016/file/a486cd07e4ac3d270571622f4f316ec5-Paper.pdf) Paper
+[1] "The SAME score: Improved cosine based bias score for word embeddings", [Arxiv Paper](https://arxiv.org/abs/2203.14603), [Conference Paper](https://ieeexplore.ieee.org/abstract/document/10651275/)    
+[2] "Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings", [Arxiv Paper](https://arxiv.org/abs/1607.06520), [Conference Paper](https://proceedings.neurips.cc/paper_files/paper/2016/file/a486cd07e4ac3d270571622f4f316ec5-Paper.pdf)    
+[3] "Measuring fairness with biased data: A case study on the effects of unsupervised data in fairness evaluation.", [Conference Paper](https://link.springer.com/chapter/10.1007/978-3-031-43085-5_11)  

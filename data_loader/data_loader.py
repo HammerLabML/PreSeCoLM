@@ -172,7 +172,7 @@ def get_dataset(dataset_name, local_dir=None):
 
     else:
         print("dataset %s not supported yet" % dataset_name)
-        return [], [], [], []
+        return [], [], [], [], 0, False, [], []
 
     if type(y_test) == list and not type(y_test[0]) == list:  # single label
         n_classes = np.max(y_test) + 1
