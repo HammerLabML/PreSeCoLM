@@ -66,13 +66,15 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
     # determine criterion and prepare class labels for torch model; for multi-labels class weights are applied
     print("fit CBM for %s, %s, %s (%s)" % (dataset, model, pooling, file_suffix))
     print("with groups ", groups)
-    if multi_label:
-        print("multi label: use BCEWithLogitsLoss")
+
+    if multi_label or n_classes == 2:
+        print("binary (multi) label: use BCEWithLogitsLoss")
         criterion = torch.nn.BCEWithLogitsLoss
     else:
-        print("single label: use CrossEntropyLoss")
+        print("single label, multi class: use CrossEntropyLoss")
+        assert len(y_train.shape) == 1 or y_train.shape[1] == 1
         criterion = torch.nn.CrossEntropyLoss
-        class_weights=None
+        class_weights = None
         y_train = y_train.flatten().astype('int')
         y_test = y_test.flatten().astype('int')
 
@@ -95,7 +97,7 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
     print(model_params)
     
     cbm = models.CBM(**model_params)
-    cbmWrapper = models.CBMWrapper(cbm, batch_size=32, class_weights=class_weights, criterion=criterion,
+    cbmWrapper = models.CBMWrapper(cbm, batch_size=64, class_weights=class_weights, criterion=criterion,
                             concept_criterion=torch.nn.BCEWithLogitsLoss, lr=lr, lambda_concept=lambda_concept, concept_weights=concept_weights)
 
     # train and remember class/ concept scores for each epoch

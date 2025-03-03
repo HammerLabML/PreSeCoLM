@@ -46,6 +46,7 @@ class CBMWrapper():
         self.class_weights = class_weights
         if class_weights is not None:
             print("use class weights")
+            print(class_weights)
             class_weights = torch.tensor(class_weights)
             if torch.cuda.is_available():
                 class_weights = class_weights.to('cuda')

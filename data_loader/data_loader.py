@@ -79,13 +79,25 @@ def get_dataset(dataset_name, local_dir=None):
         X_test = ds_test['comment_text']
 
         # create one-hot labels and identity labels (due to previous filtering labels are either < 0.33 or > 0.66)
-        y_train = np.zeros((len(ds_train), len(toxicity_classes)))
-        y_test = np.zeros((len(ds_test), len(toxicity_classes)))
         g_train = np.zeros((len(ds_train), len(protected_attr)))
         g_test = np.zeros((len(ds_test), len(protected_attr)))
-        for j, target in enumerate(toxicity_classes):
-            y_train[:, j] = (np.asarray(ds_train[target]) > 0.5).astype(float)
-            y_test[:, j] = (np.asarray(ds_test[target]) > 0.5).astype(float)
+
+        if len(toxicity_classes) == 1:
+            target = toxicity_classes[0]
+            y_train = (np.asarray(ds_train[target]) > 0.5).astype(float)
+            y_test = (np.asarray(ds_test[target]) > 0.5).astype(float)
+
+            # convert labels to onehot for BCE (which allows class weights)
+            y_train = label2onehot(y_train)
+            y_test = label2onehot(y_test)
+            toxicity_classes = ['not toxic', 'toxic'] # assumes this is the only 1class scenario
+        else:
+            y_train = np.zeros((len(ds_train), len(toxicity_classes)))
+            y_test = np.zeros((len(ds_test), len(toxicity_classes)))
+            for j, target in enumerate(toxicity_classes):
+                y_train[:, j] = (np.asarray(ds_train[target]) > 0.5).astype(float)
+                y_test[:, j] = (np.asarray(ds_test[target]) > 0.5).astype(float)
+
         for j, target in enumerate(protected_attr):
             # need 2/3 majority for identity labels, otherwise assume identitiy not mentioned (bc we explicitly look at those with identity label 1)
             g_train[:, j] = (np.asarray(ds_train[target]) > 0.66).astype(float)

@@ -1,10 +1,10 @@
 {
   "huggingface_models": [
+    "bert-base-uncased",
     "google/electra-base-generator",
     "albert-base-v2",
     "distilbert-base-uncased",
     "gpt2",
-    "bert-base-uncased",
     "roberta-base",
     "bert-large-uncased",
     "roberta-large",
@@ -24,7 +24,7 @@
     "mean",
     "cls"
   ],
-  "embedding_dir": "embeddings/",
+  "embedding_dir": "../../artifacts/embeddings/",
   "cav_train_config": "experiments/configs/new/config_train_cav_v1.yaml",
   "cbm_train_config": "experiments/configs/new/config_train_cbm_v1.yaml",
   "eval_config": "experiments/configs/new/config_eval_v1.yaml",
@@ -34,7 +34,7 @@
   "cbm_results_file": "cbm_feature_eval.csv",
   "bias_space_results_file": "bias_space_feature_eval.csv",
   "cav_results_file": "cav_feature_eval.csv",
-  "cav_dir": "cavs_new/",
-  "cbm_dir": "cbmodels/",
+  "cav_dir": "../../artifacts/cavs/",
+  "cbm_dir": "../../artifacts/cbmodels/",
   "plot_dir": "experiments/plots/new/"
 }
