@@ -16,64 +16,170 @@ import data_loader
 import plotting
 import utils
 
+NEUTRAL_KEY = 'neutral'
+
+
+def normalize(vectors: np.ndarray):
+    assert vectors.ndim == 2, "expected a 2d array"
+    # normalize each vector of a 2d numpy array
+    norms = np.apply_along_axis(np.linalg.norm, 1, vectors)
+    vectors = vectors / norms[:, np.newaxis]
+    return np.asarray(vectors)
+
 
 class BiasSpaceModel():
-
     def __init__(self):
         self.B = None
-        self.lbl = None
+        self.lbl = []
 
-    def normalize(self, vectors: np.ndarray):
-        norms = np.apply_along_axis(np.linalg.norm, 1, vectors)
-        vectors = vectors / norms[:, np.newaxis]
-        return np.asarray(vectors)
-    
-    def attr_mean(self, attribute_set):
-        A_unit = self.normalize(attribute_set)
-        center = np.mean(A_unit, axis=0)
+    @staticmethod
+    def group_mean(attribute_set):
+        attr_set_norm = normalize(attribute_set)
+        center = np.mean(attr_set_norm, axis=0)
         return center
 
-    def get_bias_space(self, attribute_sets):
-        n = len(attribute_sets)
-        assert n >= 2, "need at least two attribute groups to measure bias!"
+    def compute_bias_space(self, neutral_set: np.ndarray, defining_set_dict: dict, attribute: str = None):
+        """
+        Computes the bias space based on one attribute. Requires one defining set with neutral
+        terms and n >= 1 defining sets representing protected groups. The resulting bias space
+        and labels are stacked onto the global bias space/ label list.
 
-        if n == 2:
-            print("got two attriubtes:")
-            print(self.attr_mean(attribute_sets[0]).shape)
-            bias_components = np.asarray([self.attr_mean(attribute_sets[0]) - self.attr_mean(attribute_sets[1]), self.attr_mean(attribute_sets[1]) - self.attr_mean(attribute_sets[0])])
+        :param neutral_set: numpy array with m neutral term/phrase embeddings of dimension d, shape:(m, d)
+        :param defining_set_dict: dict of form {group: defining_set} where defining set is a numpy array of shape (m,d)
+        :param attribute: the string identifier of the current attribute, is combined with group labels
+        """
+        # computes the bias space for one protected attribute/ category given one
+        # neutral set of terms and one set of terms per protected group
+        n_groups = len(defining_set_dict)
+        assert n_groups >= 1, "need at least one protected group!"
+
+        for group, dset in defining_set_dict.items():
+            assert len(neutral_set) == len(dset), (
+                    "mismatch of defining terms for group %s with neutral terms: %i vs. %i"
+                    % (group, len(neutral_set), len(dset)))
+
+        # compute neutral base and 'any' vector
+        neutral_base = self.group_mean(neutral_set)
+
+        # in multi-attribute cases, labels can be combined (otherwise multiple 'any' labels would occur!
+        lbl_prefix = '%s:' % attribute if attribute is not None else ''
+
+        if n_groups == 1:
+            # case1: only one protected group -> only one group vector relative to neutral dir
+            group_name = next(iter(defining_set_dict))
+            group_dset = next(iter(defining_set_dict.values()))
+            print("got only one group (%s): compute group vector relative to neutral base" % group_name)
+            bias_comp = self.group_mean(group_dset) - neutral_base
+            bias_comp = bias_comp.reshape((1, bias_comp.shape[0]))
+            self.B = normalize(bias_comp)
+            self.lbl.append(lbl_prefix+group_name)
         else:
-            print("got n > 2  attributes")
-            print(self.attr_mean(attribute_sets[0]).shape)
-            bias_components = np.asarray([self.attr_mean(attribute_sets[i]) - np.mean([self.attr_mean(attribute_sets[j]) for j in range(0,n) if j != i], axis=0) for i in range(0,n)])
-        return self.normalize(bias_components)
+            # case2: multiple protected groups -> compute an 'any' vector pointing to the
+            #        mean of all groups and a vector for each group
+            print("got %i groups: compute 'any' vector and one for each group" % n_groups)
 
-    def stack_bias_spaces(self, bias_spaces : list, labels: dict):
-        assert len(bias_spaces)==len(labels)
+            # any vector is relative to neutral base
+            group_mean_vec = np.mean([self.group_mean(dset) for dset in defining_set_dict.values()], axis=0)
+            any_dir = group_mean_vec - neutral_base
+            bias_comp = [any_dir]
 
-        bias_space = np.vstack(bias_spaces)
-        label_stack = [lbl for k,v in labels.items() for lbl in v]
-    
-        return bias_space, label_stack
-    
-    def compute_multi_attr_bias_space(self, attribute_dict, attr_embs):
-        subspaces = [self.get_bias_space(attr_emb) for attr_emb in attr_embs]
-        return self.stack_bias_spaces(subspaces, attribute_dict)
+            self.lbl.append(lbl_prefix+'any')
+
+            # group vectors are relative to the mean of all groups
+            for group, dset in defining_set_dict.items():
+                other_group_mean_vec = np.mean([self.group_mean(dset_) for group_, dset_ in defining_set_dict.items() if not group_ == group], axis=0)
+                bias_comp.append(self.group_mean(dset) - other_group_mean_vec)
+                self.lbl.append(lbl_prefix+group)
+            bias_comp = np.asarray(bias_comp)
+
+        # append bias components for current protected attribute to the bias space
+        if self.B is None:
+            self.B = normalize(bias_comp)
+        else:
+            print(self.B.shape)
+            print(bias_comp.shape)
+            self.B = np.vstack([self.B, normalize(bias_comp)])
+
+    def compute_multi_attr_bias_space(self, attribute_dict):
+        """
+        Computes the bias space from the defining sets for different groups.
+        The defining sets of one attribute are equal sized arrays of embeddings.
+        Can handle an arbitrary number of protected attributes and requires at least
+        one protected group + neutral defining set per attribute.
+        The bias spaces are constructed independently for each attribute, then stacked.
+
+        :param attribute_dict: dictionary of the form: {'attributeX': {NEUTRAL_KEY: neutral_def_emb, 'groupY': defining_emb, ...}, ...}
+        """
+
+        # reset bias space and labels
+        self.B = None
+        self.lbl = []
+
+        # test proper structure of attribute dict, then compute bias space per attribute
+        assert len(attribute_dict) >= 1, "cannot compute a bias space from an empty dictionary"
+
+        for attr, subdict in attribute_dict.items():
+            assert NEUTRAL_KEY in subdict.keys(), "did not provide a neutral def. set for attribute '%s'" % attr
+            assert len(subdict) > 2, "expected defining sets for at least one group plus neutral def. set"
+
+            # if multiple attributes are available, combine group and attr label
+            attr_str = attr if len(attribute_dict) > 1 else None
+
+            group_def_set_dict = {k: v for k, v in subdict.items() if not k == NEUTRAL_KEY}
+            self.compute_bias_space(subdict[NEUTRAL_KEY], group_def_set_dict, attr_str)
+
+        assert self.B is not None, "failed to set bias space"
+        assert len(self.B) == len(self.lbl), ("mismatch of bias space dimension and #labels: %i vs. %i"
+                                              % (len(self.B), len(self.lbl)))
         
-    def fit(self, samples_by_group, attr_dict):
-        self.B, self.lbl = self.compute_multi_attr_bias_space(attr_dict, samples_by_group)
+    def fit(self, attribute_dict: dict):
+        """
+        Wrapper for compute_multi_attr_bias_space to match the naming of CBM and CAV classes.
+
+        :param attribute_dict: dictionary of the form: {'attributeX': {NEUTRAL_KEY: neutral_def_emb, 'groupY': defining_emb, ...}, ...}
+        """
+        self.compute_multi_attr_bias_space(attribute_dict)
 
     def get_concept_vectors(self):
+        """
+        Returns the bias space (= stacked concept vectors
+        :return: bias space = concept vectors
+        """
         return self.B
 
     def get_concept_activations(self, X):
-        protected_features = utils.get_features(X, self.B)
-        return protected_features
+        """
+        Returns the concept activation of bias space concepts (= dot product with input)
+        :param X: Input embeddings
+        :return: Dot product = concept activations
+        """
+        return np.matmul(X, self.B.T)
 
 
-def evaluate_bias_space(defining_terms, attribute_dict, dataset_test, model, pooling, batch_size, emb_dir, plot_dir, file_prefix, local_dir=None, sel_groups_eval=None, sel_groups_bias_space=None):
-    _, _, _, _, X_test, emb_test, y_test, g_test, groups, emb_defining_attr, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, defining_terms=defining_terms, sel_groups=sel_groups_eval)
+def add_contrastive_any_labels(g_test, group_names):
+    n_groups = g_test.shape[1]
+    new_shape = (g_test.shape[0], n_groups * 2 + 1)
+    
+    g_true = np.zeros(new_shape)
+    g_true[:, 0] = g_test.any(axis=1)  # any group
+    for i in range(n_groups):
+        # group i - other groups
+        g_true[:, i+1] = g_test[:, i]-np.sum(np.delete(g_test, i, 1), axis=1)
+    g_true[:, -n_groups:] = g_test
+
+    new_group_names = ['any'] + [name+' vs. rest' for name in group_names] + group_names
+
+    return g_true, new_group_names
+
+
+def evaluate_bias_space(defining_term_dict, dataset_test, model, pooling, batch_size, emb_dir, plot_dir, file_prefix, local_dir=None, sel_groups_eval=None, sel_groups_bias_space=None):
+    sel_groups_eval_ = sel_groups_eval
+    if 'any' in sel_groups_eval:
+        sel_groups_eval_ = [group for group in sel_groups_eval if not group == 'any']
+
+    _, _, _, _, X_test, emb_test, y_test, g_test, groups, emb_defining_attr_dict, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, defining_term_dict=defining_term_dict, sel_groups=sel_groups_eval_)
     bias_space = BiasSpaceModel()
-    bias_space.fit(emb_defining_attr, attribute_dict)
+    bias_space.fit(emb_defining_attr_dict)
     #B = bias_space.get_concept_vectors()
     feature_lbl = bias_space.lbl
 
@@ -82,40 +188,52 @@ def evaluate_bias_space(defining_terms, attribute_dict, dataset_test, model, poo
     
     pred = bias_space.get_concept_activations(emb_test)
 
-    if utils.is1D(g_test) and len(sel_groups_eval) > 1:
+    print("feature_lbl: ", feature_lbl)
+    print("sel groups bs: ", sel_groups_bias_space)
+    print("sel groups eval: ", sel_groups_eval)
+
+    if utils.is1D(g_test):
         print("convert 1d test labels to onehot")
         g_test = data_loader.label2onehot(g_test)
-        assert len(sel_groups_eval) == g_test.shape[1]
+        assert g_test.shape[1] == len(sel_groups_eval), ("shape mismatch %i vs. %i" % (g_test.shape[1], len(sel_groups_eval)))
+
+    add_labels = (sel_groups_eval[0] == 'any')
+
+    # add any- and contrastive labels for further eval
+    if add_labels:
+        g_true, groups_eval = add_contrastive_any_labels(g_test, sel_groups_eval_)
+    else:
+        groups_eval = sel_groups_eval
+        g_true = g_test
+
+    print("pred: ", pred.shape)
+    print("gtest: ", g_true.shape)
 
     print(sel_groups_eval)
     print(sel_groups_bias_space)
     assert len(sel_groups_eval) == len(sel_groups_bias_space)
 
-    if len(sel_groups_eval) == 1:
-        feature_match = sel_groups_bias_space[0]
+    # multiple groups, potentially in different order
+    statistics = []
+    pvalues = []
+    groups_ordered = []
+    for test_idx, group in enumerate(groups_eval):
+        if add_labels and 'vs. rest' not in group and not group == 'any':
+            bias_space_idx = test_idx - len(sel_groups_eval) + 1
+        else:
+            bias_space_idx = test_idx
+
+        assert type(sel_groups_bias_space[bias_space_idx]) is not list
+        feature_match = sel_groups_bias_space[bias_space_idx]
         feature_idx = feature_lbl.index(feature_match)
-        corr = scipy.stats.pearsonr(pred[:, feature_idx].flatten(), g_test)
-        statistics = [corr.statistic]
-        pvalues = [corr.pvalue]
-        groups_ordered = sel_groups_bias_space
-    else:
-        # multiple groups, potentially in different order
-        statistics = []
-        pvalues = []
-        groups_ordered = []
-        for test_idx, group in enumerate(sel_groups_eval):
-            assert type(sel_groups_bias_space[test_idx]) != list
 
-            feature_match = sel_groups_bias_space[test_idx]
-            feature_idx = feature_lbl.index(feature_match)
-
-            corr = scipy.stats.pearsonr(pred[:,feature_idx].flatten(), g_test[:,test_idx].flatten())
-            statistics.append(corr.statistic)
-            pvalues.append(corr.pvalue)
-            groups_ordered.append(feature_match)
+        corr = scipy.stats.pearsonr(pred[:, feature_idx].flatten(), g_true[:, test_idx].flatten())
+        statistics.append(corr.statistic)
+        pvalues.append(corr.pvalue)
+        groups_ordered.append(feature_match)
 
     # plot histograms for all test groups (1 or 0) against all predicted concepts, save plot
-    model_name = model.replace('/','_')
+    model_name = model.replace('/', '_')
     plot_dir = '%s/bias_space_eval' % plot_dir
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
@@ -123,9 +241,9 @@ def evaluate_bias_space(defining_terms, attribute_dict, dataset_test, model, poo
         plot_savefile = ('%s/%s_%s_%s_%s.png' % (plot_dir, file_prefix, dataset_test, model_name, pooling))
     else:
         plot_savefile = ('%s/%s_%s_%s.png' % (plot_dir, dataset_test, model_name, pooling))
-    plotting.plot_feature_histogram(pred, g_test, labels=sel_groups_eval, features=feature_lbl, xlabel=('Bias Space %s' % file_prefix), ylabel=dataset_test, savefile=plot_savefile)
+    plotting.plot_feature_histogram(pred, g_true, labels=groups_eval, features=feature_lbl, xlabel=('Bias Space %s' % file_prefix), ylabel=dataset_test, savefile=plot_savefile)
 
-    return statistics, pvalues, groups_ordered, sel_groups_eval
+    return statistics, pvalues, groups_ordered, groups_eval
 
 
 def run_bias_space_eval(config):
@@ -162,7 +280,7 @@ def run_bias_space_eval(config):
     for attr, params in eval_setups_by_attr.items():
         assert 'eval' in params.keys(), "expected key 'eval' in setup for attr %s" % attr
         assert 'defining_terms' in params.keys(), "expected key 'defining_terms' in setup for attr %s" % attr
-        assert 'groups' in params.keys(), "expected key 'groups' in setup for attr %s" % attr
+        #assert 'groups' in params.keys(), "expected key 'groups' in setup for attr %s" % attr
 
         for model in models:
             # determine batch size and pooling choices for current model
@@ -188,18 +306,19 @@ def run_bias_space_eval(config):
                         # this combination of train and eval setup has not been evaluated yet
                         print("testing %s features on %s" % (attr, eval_setup['dataset']))
 
-                        statistics, pvalues, groups_feature, groups_eval = evaluate_bias_space(params['defining_terms'], params['groups'],
-                                                                           eval_setup['dataset'], model, pool,
-                                                                           batch_size, config["embedding_dir"],
-                                                                           plot_dir=config["plot_dir"],
-                                                                           file_prefix=attr,
-                                                                           local_dir=eval_setup['local_dir'],
-                                                                           sel_groups_eval=eval_setup['groups'],
-                                                                           sel_groups_bias_space=eval_setup['groups_pie'])
+                        # TODO:
+                        stats, pvals, grp_feature, grp_eval = evaluate_bias_space(params['defining_terms'],
+                                                                                  eval_setup['dataset'], model, pool,
+                                                                                  batch_size, config["embedding_dir"],
+                                                                                  plot_dir=config["plot_dir"],
+                                                                                  file_prefix=attr,
+                                                                                  local_dir=eval_setup['local_dir'],
+                                                                                  sel_groups_eval=eval_setup['groups'],
+                                                                                  sel_groups_bias_space=eval_setup['groups_pie'])
 
-                        for i, group in enumerate(groups_feature):
+                        for i, group in enumerate(grp_feature):
                             results.loc[len(results.index)] = [attr, data_train_str, eval_setup['dataset'], model, pool,
-                                                               groups_eval[i], group, 0, statistics[i], pvalues[i]]
+                                                               grp_eval[i], group, 0, stats[i], pvals[i]]
 
                     results.to_csv(results_path, index=False)
 

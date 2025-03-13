@@ -59,7 +59,7 @@ def get_number_of_classes(y):
 
 
 def get_features(X, T):
-    return np.matmul(X,T.T)
+    return np.matmul(X, T.T)
 
 
 def eval_with_label_match(y_test, y_pred, pred, label_test, label_pred, average='weighted'):
@@ -91,7 +91,10 @@ def eval_with_label_match(y_test, y_pred, pred, label_test, label_pred, average=
     return f1_score(y_test, y_pred, average=average), cav_corr, sel_labels
 
 
-def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pooling: str, batch_size: int, local_dir=None, defining_terms=None, sel_groups=None):
+def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pooling: str, batch_size: int,
+                               local_dir=None, defining_term_dict=None, sel_groups=None):
+    assert (model_name in SUPPORTED_OPENAI_MODELS or model_name in SUPPORTED_HUGGINGFACE_MODELS), "model '%s' is not among the supported openai or huggingface models!" % model_name
+
     # load the dataset
     if local_dir is not None:
         X_train, y_train, X_test, y_test, n_classes, multi_label, class_weights, protected_attr_dict = data_loader.get_dataset(dataset, local_dir=local_dir)
@@ -106,8 +109,8 @@ def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pool
         # if multi-label and a selection of groups specified, reduce labels to these groups
         filter_ids = [protected_attr_dict['labels'].index(group) for group in sel_groups]
         if (type(g_train) == np.ndarray) or g_train != []:
-            g_train = np.squeeze(g_train[:,[filter_ids]])
-        g_test = np.squeeze(g_test[:,[filter_ids]])
+            g_train = np.squeeze(g_train[:, [filter_ids]])
+        g_test = np.squeeze(g_test[:, [filter_ids]])
     else:
         # convert to ndarray
         if type(g_test) == list:
@@ -119,7 +122,7 @@ def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pool
             sel_groups = protected_attr_dict['labels']
 
     # embed dataset and defining terms if given
-    emb_defining_attr = None
+    emb_defining_attr_dict = None
     emb_train = []
     if model_name in SUPPORTED_OPENAI_MODELS:
         # try to load pre-computed embeddings of openai model
@@ -128,9 +131,9 @@ def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pool
         if len(X_train) > 0:
             emb_train = models.get_embeddings(X_train, dataset, 'train', model_name, emb_dir)
 
-        if defining_terms is not None:
-            emb_defining_attr = models.get_defining_term_embeddings(defining_terms, model_name, emb_dir)
-    elif model_name in SUPPORTED_HUGGINGFACE_MODELS:
+        if defining_term_dict is not None:
+            emb_defining_attr_dict = models.get_defining_term_embeddings(defining_term_dict, model_name, emb_dir)
+    else:  # model_name in SUPPORTED_HUGGINGFACE_MODELS (because assert earlier!)
         # load huggingface model and get embeddings (either loaded or computed)
         lm = models.get_pretrained_model(model_name, n_classes, batch_size=batch_size, pooling=pooling, multi_label=multi_label)
 
@@ -138,16 +141,16 @@ def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pool
         if len(X_train) > 0:
             emb_train = models.load_or_compute_embeddings(X_train, lm, dataset, 'train', emb_dir)
 
-        if defining_terms is not None:
+        if defining_term_dict is not None:
+            emb_defining_attr_dict = {attr: {} for attr in defining_term_dict.keys()}
             # defining terms is a list of defining attr for different attributes (list[list[list]])
             print("embed defining terms...")
-            emb_defining_attr = [np.asarray([lm.embed(attr) for attr in terms]) for terms in defining_terms]
-
+            for attr, dterm_dict in defining_term_dict.items():
+                for group, dterms in dterm_dict.items():
+                    emb_defining_attr_dict[attr][group] = lm.embed(dterms)
         lm.model.to('cpu')
         del lm
-    else:
-        print("error: model %s not among the supported openai and huggingface models")
 
-    return X_train, emb_train, y_train, g_train, X_test, emb_test, y_test, g_test, sel_groups, emb_defining_attr, class_weights
+    return X_train, emb_train, y_train, g_train, X_test, emb_test, y_test, g_test, sel_groups, emb_defining_attr_dict, class_weights
 
 
