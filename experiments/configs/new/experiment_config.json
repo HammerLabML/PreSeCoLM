@@ -1,19 +1,19 @@
 {
   "huggingface_models": [
     "bert-base-uncased",
-    "google/electra-base-generator",
-    "albert-base-v2",
+    "bert-large-uncased",
     "distilbert-base-uncased",
     "gpt2",
-    "roberta-base",
-    "bert-large-uncased",
-    "roberta-large",
     "gpt2-large",
-    "google/electra-base-discriminator",
-    "distilroberta-base",
     "distilgpt2",
+    "roberta-base",
+    "roberta-large",
+    "distilroberta-base",
     "google/electra-large-generator",
     "google/electra-large-discriminator",
+    "google/electra-base-generator",
+    "google/electra-base-discriminator",
+    "albert-base-v2",
     "albert-large-v2"
   ],
   "openai_models": [

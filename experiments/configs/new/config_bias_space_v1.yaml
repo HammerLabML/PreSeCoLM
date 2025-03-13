@@ -1,96 +1,45 @@
-disability:
-  defining_terms:
-  - - - healthy
-      - mentally fit
-      - sane
-      - of sound mind
-      - healthy mind
-      - clearheaded
-      - of sound mind
-      - has eating habits
-      - is slightly worried
-      - has bad memories
-      - normal
-    - - mentally ill
-      - demented
-      - insane
-      - addict
-      - depression
-      - schizophrenia
-      - bipolar
-      - has eating disorder
-      - has anxiety
-      - has ptsd
-      - retarded
-  eval:
-  - dataset: crows_pairs
-    groups:
-    - mental_disability_illness
-    groups_pie:
-    - mental illness
-    local_dir: null
-    suffix: disability
-  - dataset: jigsaw
-    groups:
-    - psychiatric_or_mental_illness
-    groups_pie:
-    - mental illness
-    local_dir: ../../data/jigsaw_bias
-    suffix: disability
-  groups:
-    mental health:
-    - mentally fit
-    - mental illness
 gender:
   defining_terms:
-  - - - he
-      - his
-      - his
-      - him
-      - himself
-      - man
-      - men
+    gender:
+      neutral:
+      - a person
+      - people
+      - the person is
+      - they are
+      - they are
+      - a person
+      - those people
+      - parent
+      - their child
+      - grandparent
+      - sibling
+      - a child
+      male:
+      - a masculine person
+      - masculine people
+      - the person is male
+      - he is male
+      - they are male
+      - a man
+      - those men
       - father
-      - son
-      - grandson
-      - sons
-      - brother
-      - brothers
+      - their son
       - grandfather
-      - grandpa
-      - husband
-      - boy
-      - boys
-      - male
-      - masculine
-      - fathers
-      - grandfathers
-      - grandsons
-      - husbands
-    - - she
-      - her
-      - hers
-      - her
-      - herself
-      - woman
-      - women
+      - brother
+      - a boy
+      female:
+      - a feminine person
+      - feminine people
+      - the person is female
+      - she is female
+      - they are female
+      - a woman
+      - those women
       - mother
-      - daughter
-      - granddaughter
-      - daughters
-      - sister
-      - sisters
+      - their daughter
       - grandmother
-      - grandma
-      - wife
-      - girl
-      - girls
-      - female
-      - feminine
-      - mothers
-      - grandmortherss
-      - granddaughters
-      - wives
+      - sister
+      - a girl
   eval:
   - dataset: bios-supervised
     groups:
@@ -103,48 +52,69 @@ gender:
     suffix: null
   - dataset: jigsaw
     groups:
+    - any
     - male
     - female
     groups_pie:
+    - any
     - male
     - female
     local_dir: ../../data/jigsaw_bias
     suffix: gender
   - dataset: crows_pairs
     groups:
+    - any
     - male
     - female
     groups_pie:
+    - any
     - male
     - female
     local_dir: null
     suffix: gender
-  groups:
-    gender:
-    - male
-    - female
 race:
   defining_terms:
-  - - - white people
+    ethn_us:
+      neutral:
+      - people
+      - people
+      - american
+      - american
+      - a person
+      - someone
+      - the person is
+      white:
+      - white people
       - whites
       - white american
       - caucasian american
-      - caucasian
-    - - black people
+      - a caucasian
+      - some caucasian
+      - the person is white
+      black:
+      - black people
       - blacks
       - african american
       - afro american
-      - african
-    - - asian people
+      - an african
+      - some african
+      - the person is black
+      asian:
+      - asian people
       - asians
       - asian american
       - asian american
-      - asian
-    - - hispanic people
+      - an asian
+      - some asian
+      - the person is asian
+      hispanic:
+      - hispanic people
       - hispanics
-      - latino american
-      - hispanic american
-      - latino
+      - latin-american
+      - hispano-american
+      - a latino
+      - some latino
+      - the person is hispanic
   eval:
   - dataset: twitterAAE
     groups:
@@ -157,115 +127,137 @@ race:
     suffix: null
   - dataset: jigsaw
     groups:
+    - any
     - white
     - black
     - asian
     - latino
     groups_pie:
-    - black
+    - any
     - white
+    - black
     - asian
     - hispanic
     local_dir: ../../data/jigsaw_bias
     suffix: race
   - dataset: crows_pairs
     groups:
+    - any
     - white
     - black
     - asian
     groups_pie:
-    - black
+    - any
     - white
+    - black
     - asian
     local_dir: null
     suffix: race
-  groups:
-    ethn_us:
-    - white
-    - black
-    - asian
-    - hispanic
 religion:
   defining_terms:
-  - - - christian
+    religion:
+      neutral:
+      - people
+      - person
+      - people
+      - building
+      - building
+      - book
+      - book
+      - a person
+      - holiday
+      - holiday
+      - people
+      - people
+      christian:
+      - christian people
       - christian
       - christians
       - church
       - chapel
       - bible
       - bible
-      - christianity
-      - god
       - a christian
       - christmas
       - easter
-      - catholic
-      - lutheran
-    - - muslim
+      - catholic people
+      - lutheran people
+      muslim:
+      - muslim people
       - muslim
       - muslims
       - mosque
       - masjid
       - quran
       - quran
-      - islam
-      - allah
       - a muslim
       - ramadan
       - eid al-adha
-      - muslim
-      - muslim
-    - - jewish
+      - muslim people
+      - muslim people
+      jewish:
+      - jewish people
       - jew
       - jews
       - synagogue
       - synagog
       - tanakh
       - hebrew bible
-      - judaism
-      - yahweh
       - a jew
       - hanukkah
       - tisha bav
-      - jewish
-      - jewish
-    - - buddhist
+      - jewish people
+      - jewish people
+      buddhist:
+      - buddhist people
       - buddhist
       - buddhists
       - vihara
       - buddhist temple
       - buddhist canons
       - buddhist canons
-      - buddhism
-      - buddha
       - a buddhist
       - vesak
       - parinirvana day
-      - buddhist
-      - buddhist
-    - - hindu
+      - buddhist people
+      - buddhist people
+      hindu:
+      - hindu people
       - hindu
       - hindus
       - mandir
       - hindu temple
       - vedas
       - upanishads
-      - hinduism
-      - hindu deities
       - a hindu
       - diwali
       - makar sankranti
-      - hindu
-      - hindu
+      - hindu people
+      - hindu people
+      atheist:
+      - atheist people
+      - atheist
+      - atheists
+      - secular building
+      - secular building
+      - secular book
+      - secular book
+      - an atheist
+      - secular holiday
+      - national holiday
+      - atheist people
+      - non-religious people
   eval:
   - dataset: jigsaw
     groups:
+    - any
     - christian
     - muslim
     - jewish
     - buddhist
     - hindu
     groups_pie:
+    - any
     - christian
     - muslim
     - jewish
@@ -275,64 +267,14 @@ religion:
     suffix: religion
   - dataset: crows_pairs
     groups:
+    - any
     - christian
     - muslim
     - jewish
     groups_pie:
+    - any
     - christian
     - muslim
     - jewish
     local_dir: null
     suffix: religion
-  groups:
-    religion:
-    - christian
-    - muslim
-    - jewish
-    - buddhist
-    - hindu
-sex:
-  defining_terms:
-  - - - hetero
-      - straight
-      - straight
-      - heterosexual
-      - she is only dating men
-      - he is only dating women
-      - she is only attracted to men
-      - he is only attracted to women
-      - he dated several women so far
-      - she dated several men so far
-    - - homo
-      - gay
-      - lesbian
-      - homosexual
-      - he is only dating men
-      - she is only dating women
-      - he is only attracted to men
-      - she is only attracted to women
-      - she dated several women so far
-      - he dated several men so far
-  eval:
-  - dataset: jigsaw
-    groups:
-    - heterosexual
-    - homosexual_gay_or_lesbian
-    groups_pie:
-    - heterosexual
-    - homosexual
-    local_dir: ../../data/jigsaw_bias
-    suffix: sex
-  - dataset: crows_pairs
-    groups:
-    - heterosexual
-    - homosexual
-    groups_pie:
-    - heterosexual
-    - homosexual
-    local_dir: null
-    suffix: sex
-  groups:
-    sexual_orientaiton:
-    - heterosexual
-    - homosexual
