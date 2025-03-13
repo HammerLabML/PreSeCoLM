@@ -297,8 +297,6 @@ def run_cbm_eval(config):
                     # these data_loader do not have a classification labels, so a CBM cannot be trained
                     if train_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
                         continue
-                    if model == 'text-embedding-3-large' and train_setup['dataset'] in ['jigsaw', 'twitterAAE']: # TODO remove later
-                        continue
 
                     # check if train dataset relevant for the current attribute
                     dataset_in_test_case = False
@@ -309,8 +307,6 @@ def run_cbm_eval(config):
                         continue
                     
                     for eval_setup in eval_setups:
-                        if model == 'text-embedding-3-large' and eval_setup['dataset'] in ['jigsaw', 'twitterAAE']: # TODO remove later
-                            continue
                             
                         # skip 'same dataset' cases where no training data is available
                         if train_setup['dataset'] == eval_setup['dataset'] and eval_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
