@@ -139,6 +139,10 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
 
 
 def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, local_dir=None, sel_groups_train=None, sel_groups_test=None, file_suffix=None):
+    # check if 'any' label specified
+    add_labels = (sel_groups_test[0] == 'any')
+    sel_groups_test_ = [group for group in sel_groups_test if not group == 'any']
+
     # verify checkpoint exists
     checkpoint_file, params_file = get_cbm_savefile(cbm_dir, dataset_train, model, pooling, '')
     if not os.path.isfile(checkpoint_file):
@@ -147,7 +151,7 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         return
 
     # load test dataset and get embeddings
-    _, _, _, _, X_test, emb_test, y_test, g_test, groups_test, _, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, sel_groups=sel_groups_test)
+    _, _, _, _, X_test, emb_test, y_test, g_test, groups_test, _, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, sel_groups=sel_groups_test_)
     n_classes, multi_label = utils.get_number_of_classes(y_test)
 
     # concepts encoded as onehot
@@ -177,7 +181,7 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
 
     # get concept predictions
     _, concepts = cbmWrapper.predict(emb_test)
-    c_pred = (np.array(concepts) >= 0).astype(int) # concepts are logits!
+    c_pred = (np.array(concepts) >= 0).astype(int)  # concept scores are logits!
 
     # handle different dimensionality of test and predicted ocncepts
     if not utils.is1D(c_test) and utils.is1D(c_pred):
@@ -189,19 +193,29 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         print("convert 1d test labels to onehot")
         c_test = data_loader.label2onehot(c_test)
 
-    # evaluate the concept predictions
-    # if test and train labels do not exactly match, this can be handled by utils.eval_with_label_match
-    # otherwise just compute F1-score and Pearson correlation
-    if len(sel_groups_train) != len(groups_test):
-        f1, corr, groups_train_ordered = utils.eval_with_label_match(c_test, c_pred, concepts, sel_groups_test, sel_groups_train, average='macro')
-    else:
-        f1 = f1_score(c_test, c_pred, average='macro')
-        groups_train_ordered = groups_test
+    # align labels
+    c_test, c_pred, concepts, groups_test, groups_train = utils.align_labels(c_test, c_pred, concepts, groups_test,
+                                                                             sel_groups_train)
 
-        if not utils.is1D(concepts): # both > 1D
-            corr = scipy.stats.pearsonr(concepts, np.asarray(c_test))
-        else: # both 1D
-            corr = scipy.stats.pearsonr(concepts.flatten(), c_test.flatten())
+    # add any- and contrastive labels for further eval
+    if add_labels:
+        c_test_, groups_test_ = utils.add_contrastive_any_labels(c_test, groups_test)
+        concepts_, groups_train_ = utils.add_contrastive_any_labels(concepts, groups_train)
+    else:
+        groups_test_ = groups_test
+        groups_train_ = groups_train
+        c_test_ = c_test
+        concepts_ = concepts
+
+    # evaluate the concept predictions
+    # train and test labels are already aligned
+    # compute F1-score and Pearson correlation
+    f1 = f1_score(c_test, c_pred, average='macro')
+
+    if not utils.is1D(concepts_):  # both > 1D
+        corr = scipy.stats.pearsonr(concepts_, np.asarray(c_test_))
+    else:  # both 1D
+        corr = scipy.stats.pearsonr(concepts_.flatten(), c_test_.flatten())
 
     # plot histograms for all test groups (1 or 0) against all predicted concepts, save plot
     model_name = model.replace('/','_')
@@ -209,12 +223,15 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
     if file_suffix is not None:
-        plot_savefile = ('%s/%s_%s_%s_%s_%s.png' % (plot_dir, dataset_train, dataset_test, model_name, pooling, file_suffix))
+        plot_savefile = ('%s/%s_%s_%s_%s_%s.png' % (plot_dir, dataset_train, dataset_test, model_name, pooling,
+                                                    file_suffix))
     else:
         plot_savefile = ('%s/%s_%s_%s_%s.png' % (plot_dir, dataset_train, dataset_test, model_name, pooling))
-    plotting.plot_feature_histogram(concepts, c_test, labels=groups_test, features=sel_groups_train, xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
 
-    return f1, corr, groups_train_ordered, groups_test
+    plotting.plot_feature_histogram(concepts_, c_test_, labels=groups_test_, features=groups_train_,
+                                    xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
+
+    return f1, corr, groups_train_, groups_test_
 
 
 def run_cbm_training(config):

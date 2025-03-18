@@ -156,22 +156,6 @@ class BiasSpaceModel():
         return np.matmul(X, self.B.T)
 
 
-def add_contrastive_any_labels(g_test, group_names):
-    n_groups = g_test.shape[1]
-    new_shape = (g_test.shape[0], n_groups * 2 + 1)
-    
-    g_true = np.zeros(new_shape)
-    g_true[:, 0] = g_test.any(axis=1)  # any group
-    for i in range(n_groups):
-        # group i - other groups
-        g_true[:, i+1] = g_test[:, i]-np.sum(np.delete(g_test, i, 1), axis=1)
-    g_true[:, -n_groups:] = g_test
-
-    new_group_names = ['any'] + [name+' vs. rest' for name in group_names] + group_names
-
-    return g_true, new_group_names
-
-
 def evaluate_bias_space(defining_term_dict, dataset_test, model, pooling, batch_size, emb_dir, plot_dir, file_prefix, local_dir=None, sel_groups_eval=None, sel_groups_bias_space=None):
     sel_groups_eval_ = sel_groups_eval
     if 'any' in sel_groups_eval:
@@ -201,7 +185,7 @@ def evaluate_bias_space(defining_term_dict, dataset_test, model, pooling, batch_
 
     # add any- and contrastive labels for further eval
     if add_labels:
-        g_true, groups_eval = add_contrastive_any_labels(g_test, sel_groups_eval_)
+        g_true, groups_eval = utils.add_contrastive_any_labels(g_test, sel_groups_eval_)
     else:
         groups_eval = sel_groups_eval
         g_true = g_test

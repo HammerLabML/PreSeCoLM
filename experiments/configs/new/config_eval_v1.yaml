@@ -18,12 +18,14 @@ gender:
   suffix: null
 - dataset: jigsaw
   groups:
+  - any
   - male
   - female
   local_dir: ../../data/jigsaw_bias
   suffix: gender
 - dataset: crows_pairs
   groups:
+  - any
   - male
   - female
   local_dir: null
@@ -37,6 +39,7 @@ race:
   suffix: null
 - dataset: jigsaw
   groups:
+  - any
   - black
   - white
   - asian
@@ -45,6 +48,7 @@ race:
   suffix: race
 - dataset: crows_pairs
   groups:
+  - any
   - black
   - white
   - asian
@@ -53,6 +57,7 @@ race:
 religion:
 - dataset: jigsaw
   groups:
+  - any
   - christian
   - muslim
   - jewish
@@ -62,6 +67,7 @@ religion:
   suffix: religion
 - dataset: crows_pairs
   groups:
+  - any
   - christian
   - muslim
   - jewish

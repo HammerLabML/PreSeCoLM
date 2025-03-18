@@ -69,24 +69,29 @@ def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=
 
 
 def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_dir, cav_dir, plot_dir, local_dir=None, sel_groups_train=None, sel_groups_test=None, file_suffix=None):
+    # check if 'any' label specified
+    add_labels = (sel_groups_test[0] == 'any')
+    sel_groups_test_ = [group for group in sel_groups_test if not group == 'any']
+    sel_groups_train_ = [group for group in sel_groups_train if not group == 'any']
+
     file_name = get_cav_savefile(cav_dir, dataset_train, model, pooling, file_suffix)
 
     # load CAVs from file, check label consistency
     with open(file_name, "rb") as handle:
         save_dict = pickle.load(handle)
     cavs = save_dict['cavs']
-    if sel_groups_train is not None:
+    if sel_groups_train_ is not None:
         err_msg = "loaded CAVs, but the groups from savefile (%s) do not match the selected groups (%s)" % (save_dict['labels'], sel_groups_train)
-        if len(save_dict['labels']) == 1 and len(sel_groups_train) == 2:
-            single_label = "%s/%s" % (sel_groups_train[0], sel_groups_train[1])
+        if len(save_dict['labels']) == 1 and len(sel_groups_train_) == 2:
+            single_label = "%s/%s" % (sel_groups_train_[0], sel_groups_train_[1])
             assert save_dict['labels'][0] == single_label, err_msg
         else:
-            assert save_dict['labels'] == sel_groups_train, err_msg
+            assert save_dict['labels'] == sel_groups_train_, err_msg
     else:
-        sel_groups_train = save_dict['labels']
+        sel_groups_train_ = save_dict['labels']
 
     # get the eval dataset + embeddings
-    _, _, _, _, X_test, emb_test, y_test, g_test, groups_test, _, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, sel_groups=sel_groups_test)
+    _, _, _, _, X_test, emb_test, y_test, g_test, groups_test, _, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, sel_groups=sel_groups_test_)
 
     # compute concept activations and labels
     pred = np.dot(emb_test, cavs.T)
@@ -99,33 +104,49 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         print("convert 1d prediction to onehot")
         g_pred = data_loader.label2onehot(g_pred, minv=int(np.min(g_test)), maxv=int(np.max(g_test)))
         pred = np.hstack([-pred, pred])
-        assert len(sel_groups_train) == 2
+        assert len(sel_groups_train_) == 2
     if utils.is1D(g_test) and not utils.is1D(g_pred):
         print("convert 1d test labels to onehot")
         g_test = data_loader.label2onehot(g_test)
         assert len(groups_test) == 2
     if utils.is1D(g_test) and utils.is1D(g_pred):
-        if len(sel_groups_train) == 2:
-            sel_groups_train = ["%s/%s" % (sel_groups_train[0], sel_groups_train[1])]
+        if len(sel_groups_train_) == 2:
+            sel_groups_train_ = ["%s/%s" % (sel_groups_train_[0], sel_groups_train_[1])]
         if len(groups_test) == 2:
             groups_test = ["%s/%s" % (groups_test[0], groups_test[1])]
 
-    # evaluate the concept activations
-    # if test and train labels do not exactly match, this can be handled by utils.eval_with_label_match
-    # otherwise just compute F1-score and Pearson correlation
-    if len(sel_groups_train) != len(groups_test) or save_dict['labels'] != sel_groups_train:
-        f1, cav_corr, groups_train_ordered = utils.eval_with_label_match(g_test, g_pred, pred, sel_groups_test, sel_groups_train, average='macro')
-    else:
-        f1 = f1_score(g_test, g_pred, average='macro')
-        groups_train_ordered = groups_test
+    # align labels
+    c_test, c_pred, pred, groups_test, groups_train = utils.align_labels(g_test, g_pred, pred, groups_test,
+                                                                             sel_groups_train_)
 
-        if not utils.is1D(pred): # both > 1D
-            cav_corr = scipy.stats.pearsonr(pred, np.asarray(g_test))
-        else: # both 1D
-            cav_corr = scipy.stats.pearsonr(pred.flatten(), g_test.flatten())
+    # add any- and contrastive labels for further eval
+    if add_labels:
+        c_test_, groups_test_ = utils.add_contrastive_any_labels(c_test, groups_test)
+        pred_, groups_train_ = utils.add_contrastive_any_labels(pred, groups_train)
+    else:
+        groups_test_ = groups_test
+        groups_train_ = groups_train
+        c_test_ = c_test
+        pred_ = pred
+
+    print("final concept logit/label shapes:")
+    print(c_test_.shape)
+    print(pred_.shape)
+    print("with groups: ", groups_test_)
+    print("with groups: ", groups_train_)
+
+    # evaluate the concept predictions
+    # train and test labels are already aligned
+    # compute F1-score and Pearson correlation
+    f1 = f1_score(c_test, c_pred, average='macro')
+
+    if not utils.is1D(pred_):  # both > 1D
+        cav_corr = scipy.stats.pearsonr(pred_, np.asarray(c_test_))
+    else:  # both 1D
+        cav_corr = scipy.stats.pearsonr(pred_.flatten(), c_test_.flatten())
 
     # plot histograms for all test groups (1 or 0) against all predicted concepts, save plot
-    model_name = model.replace('/','_')
+    model_name = model.replace('/', '_')
     plot_dir = '%s/cav_eval' % plot_dir
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
@@ -134,9 +155,9 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     else:
         plot_savefile = ('%s/%s_%s_%s_%s.png' % (plot_dir, dataset_train, dataset_test, model_name, pooling))
 
-    plotting.plot_feature_histogram(pred, g_test, labels=groups_test, features=sel_groups_train, xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
+    plotting.plot_feature_histogram(pred_, c_test_, labels=groups_test_, features=groups_train_, xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
 
-    return f1, cav_corr, groups_train_ordered, groups_test
+    return f1, cav_corr, groups_train_, groups_test_
 
 
 def run_cav_training(config):

@@ -32,6 +32,22 @@ LABEL_MATCHES = {'black': 'aa', 'aa': 'black', 'M': 'male', 'male': 'M', 'F': 'f
                  'psychiatric_or_mental_illness': 'mental_disability_illness', 'mental_disability_illness': 'psychiatric_or_mental_illness'}
 
 
+def add_contrastive_any_labels(g_test, group_names):
+    n_groups = g_test.shape[1]
+    new_shape = (g_test.shape[0], n_groups * 2 + 1)
+
+    g_true = np.zeros(new_shape)
+    g_true[:, 0] = g_test.any(axis=1)  # any group
+    for i in range(n_groups):
+        # group i - other groups
+        g_true[:, i + 1] = g_test[:, i] - np.sum(np.delete(g_test, i, 1), axis=1)
+    g_true[:, -n_groups:] = g_test
+
+    new_group_names = ['any'] + [name + ' vs. rest' for name in group_names] + group_names
+
+    return g_true, new_group_names
+
+
 def load_dataset_and_get_finetuned_model(model_name, dataset_name, batch_size_lookup, pooling='mean', epochs=5, local_dir=None, run_eval=False):
     X_train, y_train, X_test, y_test, n_classes, multi_label, class_weights, _ = data_loader.get_dataset(dataset_name, local_dir=local_dir)
     lm = models.get_finetuned_model(model_name, dataset_name, batch_size_lookup, n_classes, multi_label, X_train, y_train, X_test, y_test, pooling=pooling, epochs=epochs, run_eval=run_eval)
@@ -62,7 +78,7 @@ def get_features(X, T):
     return np.matmul(X, T.T)
 
 
-def eval_with_label_match(y_test, y_pred, pred, label_test, label_pred, average='weighted'):
+def align_labels(y_test, y_pred, pred, label_test, label_pred):
     # align predictions and test labels:
     # there might be more predicted groups than test groups
     # the order of groups might be different
@@ -71,24 +87,21 @@ def eval_with_label_match(y_test, y_pred, pred, label_test, label_pred, average=
         # got predictions for more groups than available in test data
         # reduce pred to match the number of test groups (minding the order of groups!)
         if len(label_test) == 1 and y_test.shape[1] == 2:
-            y_test = y_test[:,1]
+            y_test = y_test[:, 1]
         sel_labels = [lbl if lbl in label_pred else LABEL_MATCHES[lbl] for lbl in label_test]
         ids_pred = [label_pred.index(lbl) for lbl in sel_labels]
-        y_pred = y_pred[:,ids_pred]
-        pred = pred[:,ids_pred]
+        y_pred = y_pred[:, ids_pred]
+        pred = pred[:, ids_pred]
+        label_pred = sel_labels
     else:
         # same groups in pred in test labels; check order and match inconsistent names that refer to the same group
         sel_labels = [lbl if lbl in label_test else LABEL_MATCHES[lbl] for lbl in label_pred]
         if y_test.ndim > 1:
             ids_test = [label_test.index(lbl) for lbl in sel_labels]
             y_test = y_test[:, ids_test]
+        label_test = sel_labels
 
-    if not is1D(pred): # both > 1D
-        cav_corr = scipy.stats.pearsonr(pred, np.asarray(y_test))
-    else: # both 1D
-        cav_corr = scipy.stats.pearsonr(pred.flatten(), y_test.flatten())
-
-    return f1_score(y_test, y_pred, average=average), cav_corr, sel_labels
+    return y_test, y_pred, pred, label_test, label_pred
 
 
 def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pooling: str, batch_size: int,
