@@ -1,0 +1,64 @@
+gender:
+- dataset: bios-supervised
+  groups:
+  - male
+  - female
+  local_dir: ../../data/bios_huggingface_merge.pkl
+  suffix: null
+- dataset: jigsaw
+  groups:
+  - any
+  - male
+  - female
+  local_dir: ../../data/jigsaw_bias
+  suffix: gender
+- dataset: crows_pairs
+  groups:
+  - any
+  - male
+  - female
+  local_dir: null
+  suffix: gender
+race:
+- dataset: twitterAAE
+  groups:
+  - aa
+  - white
+  local_dir: null
+  suffix: null
+- dataset: jigsaw
+  groups:
+  - any
+  - black
+  - white
+  - asian
+  - latino
+  local_dir: ../../data/jigsaw_bias
+  suffix: race
+- dataset: crows_pairs
+  groups:
+  - any
+  - black
+  - white
+  - asian
+  local_dir: null
+  suffix: race
+religion:
+- dataset: jigsaw
+  groups:
+  - any
+  - christian
+  - muslim
+  - jewish
+  - buddhist
+  - hindu
+  local_dir: ../../data/jigsaw_bias
+  suffix: religion
+- dataset: crows_pairs
+  groups:
+  - any
+  - christian
+  - muslim
+  - jewish
+  local_dir: null
+  suffix: religion

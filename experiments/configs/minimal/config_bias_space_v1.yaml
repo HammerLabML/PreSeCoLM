@@ -1,0 +1,235 @@
+gender:
+  defining_terms:
+    gender:
+      neutral:
+      - a person
+      - people
+      - the person is
+      - they are
+      - they are
+      - a person
+      - those people
+      - parent
+      - their child
+      - grandparent
+      - sibling
+      - a child
+      male:
+      - a masculine person
+      - masculine people
+      - the person is male
+      - he is male
+      - they are male
+      - a man
+      - those men
+      - father
+      - their son
+      - grandfather
+      - brother
+      - a boy
+      female:
+      - a feminine person
+      - feminine people
+      - the person is female
+      - she is female
+      - they are female
+      - a woman
+      - those women
+      - mother
+      - their daughter
+      - grandmother
+      - sister
+      - a girl
+  eval:
+  - dataset: bios-supervised
+    groups:
+    - male
+    - female
+    groups_pie:
+    - male
+    - female
+    local_dir: ../../data/bios_huggingface_merge.pkl
+    suffix: null
+  - dataset: jigsaw
+    groups:
+    - any
+    - male
+    - female
+    groups_pie:
+    - any
+    - male
+    - female
+    local_dir: ../../data/jigsaw_bias
+    suffix: gender
+  - dataset: crows_pairs
+    groups:
+    - any
+    - male
+    - female
+    groups_pie:
+    - any
+    - male
+    - female
+    local_dir: null
+    suffix: gender
+race:
+  defining_terms:
+    ethn_us:
+      neutral:
+      - people
+      - people
+      - american
+      - american
+      - a person
+      - someone
+      - the person is
+      white:
+      - white people
+      - whites
+      - white american
+      - caucasian american
+      - a caucasian
+      - some caucasian
+      - the person is white
+      black:
+      - black people
+      - blacks
+      - african american
+      - afro american
+      - an african
+      - some african
+      - the person is black
+      asian:
+      - asian people
+      - asians
+      - asian american
+      - asian american
+      - an asian
+      - some asian
+      - the person is asian
+      hispanic:
+      - hispanic people
+      - hispanics
+      - latin-american
+      - hispano-american
+      - a latino
+      - some latino
+      - the person is hispanic
+  eval:
+  - dataset: twitterAAE
+    groups:
+    - aa
+    - white
+    groups_pie:
+    - black
+    - white
+    local_dir: null
+    suffix: null
+  - dataset: crows_pairs
+    groups:
+    - any
+    - white
+    - black
+    - asian
+    groups_pie:
+    - any
+    - white
+    - black
+    - asian
+    local_dir: null
+    suffix: race
+religion:
+  defining_terms:
+    religion:
+      neutral:
+      - people
+      - person
+      - people
+      - building
+      - building
+      - book
+      - book
+      - a person
+      - holiday
+      - holiday
+      - people
+      - people
+      christian:
+      - christian people
+      - christian
+      - christians
+      - church
+      - chapel
+      - bible
+      - bible
+      - a christian
+      - christmas
+      - easter
+      - catholic people
+      - lutheran people
+      muslim:
+      - muslim people
+      - muslim
+      - muslims
+      - mosque
+      - masjid
+      - quran
+      - quran
+      - a muslim
+      - ramadan
+      - eid al-adha
+      - muslim people
+      - muslim people
+      jewish:
+      - jewish people
+      - jew
+      - jews
+      - synagogue
+      - synagog
+      - tanakh
+      - hebrew bible
+      - a jew
+      - hanukkah
+      - tisha bav
+      - jewish people
+      - jewish people
+      buddhist:
+      - buddhist people
+      - buddhist
+      - buddhists
+      - vihara
+      - buddhist temple
+      - buddhist canons
+      - buddhist canons
+      - a buddhist
+      - vesak
+      - parinirvana day
+      - buddhist people
+      - buddhist people
+      hindu:
+      - hindu people
+      - hindu
+      - hindus
+      - mandir
+      - hindu temple
+      - vedas
+      - upanishads
+      - a hindu
+      - diwali
+      - makar sankranti
+      - hindu people
+      - hindu people
+  eval:
+  - dataset: crows_pairs
+    groups:
+    - any
+    - christian
+    - muslim
+    - jewish
+    groups_pie:
+    - any
+    - christian
+    - muslim
+    - jewish
+    local_dir: null
+    suffix: religion

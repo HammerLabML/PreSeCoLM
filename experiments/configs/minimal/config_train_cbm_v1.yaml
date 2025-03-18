@@ -1,0 +1,24 @@
+- dataset: bios-supervised
+  groups:
+  - male
+  - female
+  local_dir: ../../data/bios_huggingface_merge.pkl
+  suffix: null
+- dataset: jigsaw
+  groups:
+  - male
+  - female
+  - black
+  - white
+  - asian
+  - latino
+  - christian
+  - muslim
+  - jewish
+  - buddhist
+  - hindu
+  - heterosexual
+  - homosexual_gay_or_lesbian
+  - psychiatric_or_mental_illness
+  local_dir: ../../data/jigsaw_bias
+  suffix: ''
