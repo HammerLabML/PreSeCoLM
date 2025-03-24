@@ -1,4 +1,4 @@
-from .dataset import Dataset
+from .dataset import CustomDataset
 from .helper import simplify_text
 
 import datasets
@@ -27,7 +27,7 @@ for group_name in list(terms_race.keys())+list(terms_gender.keys())+list(terms_r
     n_groups += 1
 
 
-class StereoSet(Dataset):
+class StereoSet(CustomDataset):
 
     def __init__(self, local_dir: str = None, option: str = 'both'):
         super().__init__(local_dir)

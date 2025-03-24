@@ -40,7 +40,7 @@ def compute_class_weights(y_train: np.ndarray, classes: list):
     return class_weights
 
 
-class Dataset:
+class CustomDataset:
 
     def __init__(self, local_dir: str = None, n_folds: int = 4, random_state: int = 42):
         self.name = None
@@ -61,6 +61,7 @@ class Dataset:
         self.splits = []
         self.n_samples = {}  # per split
         self.multi_label = False
+        self.unlabeled = False
         self.n_groups = 0
         self.n_classes = 0
 

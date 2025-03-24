@@ -1,8 +1,8 @@
-import difflib
-import string
+import datasets
 import numpy as np
 
-PUNCTUATION = string.punctuation.replace('-', '')
+from .dataset import CustomDataset
+from .helper import simplify_text, get_diff
 
 GROUPS_BY_BIAS_TYPES = {"race-color": ["black", "white", "asian"],
                         "socioeconomic": ["poor", "rich"],
@@ -98,7 +98,7 @@ GROUPS_TO_LABEL = ['black', 'white', 'asian', 'poor', 'rich', 'male', 'female', 
 
 
 def get_group_label(modified_terms: list, bias_type: str):
-    if not bias_type in GROUPS_BY_BIAS_TYPES.keys():
+    if bias_type not in GROUPS_BY_BIAS_TYPES.keys():
         return None, None
     assert len(modified_terms) > 0
 
@@ -120,30 +120,6 @@ def get_group_label(modified_terms: list, bias_type: str):
     return group_lbl, list(set(missing))
 
 
-def simplify_text(text: str):
-    return text.strip().lower().translate(str.maketrans('', '', PUNCTUATION))
-
-
-def get_diff(seq1, seq2):
-    seq1 = seq1.split(' ')
-    seq2 = seq2.split(' ')
-    matcher = difflib.SequenceMatcher(None, seq1, seq2)
-    modified1 = []
-    modified2 = []
-    for op in matcher.get_opcodes():
-        if not op[0] == 'equal':
-            mod1 = ""
-            mod2 = ""
-            for x in range(op[1], op[2]):
-                mod1 += ' ' + seq1[x]
-            for x in range(op[3], op[4]):
-                mod2 += ' ' + seq2[x]
-            modified1.append(simplify_text(mod1))
-            modified2.append(simplify_text(mod2))
-
-    return modified1, modified2
-
-
 def group_mentioned_in_sentence(sentence, group_terms):
     sent = simplify_text(sentence)
     for term in group_terms:
@@ -153,37 +129,48 @@ def group_mentioned_in_sentence(sentence, group_terms):
     return False
 
 
-def preprocess_crowspairs(dataset):
-    n_sent = len(dataset) * 2  # each sample includes two sentences
-    n_groups = len(GROUPS_TO_LABEL)
+class CrowSPairs(CustomDataset):
 
-    bias_types = dataset.info.features['bias_type'].names
-    labels = dataset.info.features['stereo_antistereo'].names
+    def __init__(self, local_dir: str = None):
+        super().__init__(local_dir)
 
-    protected_groups = GROUPS_TO_LABEL
-    X_test = []
-    y_test = []  # [-1 for i in range(n_sent)]
-    g_test = np.zeros((n_sent, n_groups))
+        self.name = 'crowspairs'
+        self.group_names = GROUPS_TO_LABEL
 
-    for sample in dataset:
-        bias_type = bias_types[sample['bias_type']]
-        mod1, mod2 = get_diff(sample['sent_more'], sample['sent_less'])
-        sample['group_more'], sample['terms_missing_more'] = get_group_label(mod1, bias_type)
-        sample['group_less'], sample['terms_missing_less'] = get_group_label(mod2, bias_type)
-        is_valid = sample['group_more'] is not None and sample['group_less'] is not None and sample['group_more'] != \
-                   sample['group_less']
+        print("load crowspairs")
+        self.load(local_dir)
+        self.prepare()
 
-        X_test.append(sample['sent_more'])
-        X_test.append(sample['sent_less'])
-        y_test.append(sample['stereo_antistereo'])
-        y_test.append(1 - sample['stereo_antistereo'])
+    def load(self, local_dir=None):
+        dataset = datasets.load_dataset('crows_pairs', split='test')
+        n_sent = len(dataset) * 2  # each sample includes two sentences
 
-        idx_more = len(X_test) - 2
-        idx_less = len(X_test) - 1
-        for idx_group, group in enumerate(protected_groups):
-            if group_mentioned_in_sentence(sample['sent_more'], TERMS_BY_GROUPS[group]):
-                g_test[idx_more, idx_group] = 1
-            if group_mentioned_in_sentence(sample['sent_less'], TERMS_BY_GROUPS[group]):
-                g_test[idx_less, idx_group] = 1
+        bias_types = dataset.info.features['bias_type'].names
+        self.class_names = dataset.info.features['stereo_antistereo'].names
+        n_groups = len(self.group_names)
 
-    return X_test, y_test, g_test, protected_groups
+        self.data['test'] = []
+        self.labels['test'] = []
+        self.protected_groups['test'] = np.zeros((n_sent, n_groups))
+
+        for sample in dataset:
+            bias_type = bias_types[sample['bias_type']]
+            mod1, mod2 = get_diff(sample['sent_more'], sample['sent_less'])
+            sample['group_more'], sample['terms_missing_more'] = get_group_label(mod1, bias_type)
+            sample['group_less'], sample['terms_missing_less'] = get_group_label(mod2, bias_type)
+
+            self.data['test'].append(sample['sent_more'])
+            self.data['test'].append(sample['sent_less'])
+            self.labels['test'].append(sample['stereo_antistereo'])
+            self.labels['test'].append(1 - sample['stereo_antistereo'])
+
+            idx_more = len(self.data['test']) - 2
+            idx_less = len(self.data['test']) - 1
+            for idx_group, group in enumerate(self.group_names):
+                if group_mentioned_in_sentence(sample['sent_more'], TERMS_BY_GROUPS[group]):
+                    self.protected_groups['test'][idx_more, idx_group] = 1
+                if group_mentioned_in_sentence(sample['sent_less'], TERMS_BY_GROUPS[group]):
+                    self.protected_groups['test'][idx_less, idx_group] = 1
+
+        self.labels['test'] = np.asarray(self.labels['test']).reshape(-1, 1)
+

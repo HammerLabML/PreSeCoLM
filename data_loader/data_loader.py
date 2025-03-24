@@ -3,7 +3,8 @@ import pickle
 
 from datasets import load_dataset
 from .bios import filter_bios_dataset
-from .crowspairs import preprocess_crowspairs
+#from .crowspairs import preprocess_crowspairs
+#from .stereoset import load_stereoset
 
 
 def is_onehot(y):
@@ -90,7 +91,7 @@ def get_dataset(dataset_name, local_dir=None):
             # convert labels to onehot for BCE (which allows class weights)
             y_train = label2onehot(y_train)
             y_test = label2onehot(y_test)
-            toxicity_classes = ['not toxic', 'toxic'] # assumes this is the only 1class scenario
+            toxicity_classes = ['not toxic', 'toxic']  # assumes this is the only 1class scenario
         else:
             y_train = np.zeros((len(ds_train), len(toxicity_classes)))
             y_test = np.zeros((len(ds_test), len(toxicity_classes)))
@@ -169,6 +170,8 @@ def get_dataset(dataset_name, local_dir=None):
         protected_attributes['test'] = g_test
         protected_attributes['labels'] = ['aa', 'white']
 
+    elif dataset_name == 'stereoset':
+        load_stereoset(version='both')
     elif dataset_name == 'crows_pairs':
         dataset = load_dataset(dataset_name, split='test')
         X_test, y_test, g_test, protected_groups = preprocess_crowspairs(dataset)
