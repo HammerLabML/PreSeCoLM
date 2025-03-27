@@ -45,5 +45,9 @@
 "xlnet-large-cased": 4,
 "distilbert-base-multilingual-cased": 8,
 "google/electra-small-generator": 32, 
-"facebook/xlm-v-base": 2
+"facebook/xlm-v-base": 2,
+"EleutherAI/pythia-160m": 8,
+"EleutherAI/pythia-410m": 2,
+"EleutherAI/pythia-1b": 1,
+"EleutherAI/pythia-1.4b": 1
 }

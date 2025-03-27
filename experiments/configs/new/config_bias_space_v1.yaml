@@ -72,6 +72,17 @@ gender:
     - female
     local_dir: null
     suffix: gender
+  - dataset: stereoset
+    groups:
+      - any
+      - male
+      - female
+    groups_pie:
+      - any
+      - male
+      - female
+    local_dir: null
+    suffix: gender
 race:
   defining_terms:
     ethn_us:
@@ -115,6 +126,14 @@ race:
       - a latino
       - some latino
       - the person is hispanic
+      middle eastern:
+      - middle eastern people
+      - middle easterners
+      - middle eastern american
+      - middle eastern american
+      - a middle easterner
+      - some middle easterner
+      - the person is middle eastern
   eval:
   - dataset: twitterAAE
     groups:
@@ -153,6 +172,23 @@ race:
     - asian
     local_dir: null
     suffix: race
+  - dataset: stereoset
+    groups:
+    - any
+    - european/white
+    - african/black
+    - hispanic
+    - south east asian
+    - middle east
+    groups_pie:
+    - any
+    - white
+    - black
+    - hispanic
+    - asian
+    - middle eastern
+    local_dir: null
+    suffix: gender
 religion:
   defining_terms:
     religion:
@@ -276,5 +312,18 @@ religion:
     - christian
     - muslim
     - jewish
+    local_dir: null
+    suffix: religion
+  - dataset: stereoset
+    groups:
+      - any
+      - christian
+      - muslim
+      - hindu
+    groups_pie:
+      - any
+      - christian
+      - muslim
+      - hindu
     local_dir: null
     suffix: religion

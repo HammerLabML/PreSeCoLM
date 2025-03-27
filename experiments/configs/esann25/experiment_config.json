@@ -18,7 +18,7 @@
     "mean",
     "cls"
   ],
-  "embedding_dir": "../../artifacts/embeddings/",
+  "embedding_dir": "../../artifacts/embeddings_esann/",
   "cav_train_config": "experiments/configs/esann25/config_train_cav_v1.yaml",
   "cbm_train_config": "experiments/configs/esann25/config_train_cbm_v1.yaml",
   "eval_config": "experiments/configs/esann25/config_eval_v1.yaml",

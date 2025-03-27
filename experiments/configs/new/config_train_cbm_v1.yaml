@@ -43,3 +43,17 @@
   - mental_disability_illness
   local_dir: null
   suffix: ''
+- dataset: stereoset
+  groups:
+    - male
+    - female
+    - european/white
+    - african/black
+    - hispanic
+    - south east asian
+    - middle east
+    - christian
+    - muslim
+    - hindu
+  local_dir: null
+  suffix: ''

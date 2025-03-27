@@ -16,6 +16,12 @@
   - female
   local_dir: null
   suffix: gender
+- dataset: stereoset
+  groups:
+    - male
+    - female
+  local_dir: null
+  suffix: gender
 - dataset: twitterAAE
   groups:
   - aa
@@ -37,6 +43,15 @@
   - asian
   local_dir: null
   suffix: race
+- dataset: stereoset
+  groups:
+    - european/white
+    - african/black
+    - hispanic
+    - south east asian
+    - middle east
+  local_dir: null
+  suffix: race
 - dataset: jigsaw
   groups:
   - christian
@@ -51,6 +66,13 @@
   - christian
   - muslim
   - jewish
+  local_dir: null
+  suffix: religion
+- dataset: stereoset
+  groups:
+    - christian
+    - muslim
+    - hindu
   local_dir: null
   suffix: religion
 - dataset: jigsaw
