@@ -327,3 +327,46 @@ religion:
       - hindu
     local_dir: null
     suffix: religion
+dialect:
+  defining_terms:
+    ae_dialect:
+      neutral:
+      - she is always working
+      - he doesn't have any
+      - i am about to go to the store
+      - she is my sister
+      - they were at the party
+      - we have finished our homework
+      - you are always joking around
+      - i haven't seen him today
+      - it doesn't matter
+      - she got her hair done
+      - she has known him for a long time
+      - that's my brother's car
+      - yesterday, he walked to the store
+      - i don't know anything
+      - he will be going to the store tomorrow
+      - he told me the story
+      - are you all coming to the party
+      - she runs fast
+      - there are a lot of people here
+      aae:
+      - she be workin' all the time
+      - he ain't got none
+      - i'm finna go to the store
+      - she my sister
+      - they was at the party
+      - we done finished our homework
+      - you stay playin' too much
+      - i ain't seen him today
+      - it don't matter
+      - she got her hair did
+      - she been knowing him
+      - that my brother car
+      - yesterday, he walk to the store
+      - i don't know nothing
+      - he be going to the store tomorrow
+      - he tol' me the story
+      - y'all coming to the party
+      - she run fast
+      - it's a lot of people here

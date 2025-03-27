@@ -6,13 +6,13 @@ import itertools
 
 
 def is_onehot(y):
-    return type(y) == np.ndarray and y.ndim >= 2 and y.shape[1] > 1 and np.min(y) == 0 and np.max(y) == 1
+    return type(y) is np.ndarray and y.ndim >= 2 and y.shape[1] > 1 and np.min(y) == 0 and np.max(y) == 1
 
 
 def label2onehot(y, minv=0, maxv=None):
     if is_onehot(y):
         return y
-    if type(y) == list:
+    if type(y) is list:
         y = np.asarray(y, dtype='int')
     else:
         y = y.astype('int')
@@ -93,7 +93,7 @@ class CustomDataset:
         if self.multi_label:
             self.n_classes = self.labels[self.splits[0]].shape[1]
         else:
-            self.n_classes = np.max(self.labels[self.splits[0]]) + 1
+            self.n_classes = int(np.max(self.labels[self.splits[0]]) + 1)
 
         assert len(self.group_names) == self.n_groups
         assert len(self.class_names) == self.n_classes

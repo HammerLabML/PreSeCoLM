@@ -31,7 +31,7 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir):
     return embeddings
 
 
-def get_pretrained_model(model_name, n_classes, batch_size=1, pooling='mean', multi_label=False):    
+def get_pretrained_model(model_name, n_classes, batch_size=1, pooling='mean', multi_label=False):
     if multi_label: 
         lm = BertHuggingface(n_classes, model_name=model_name, batch_size=batch_size, pooling=pooling, loss_function=torch.nn.BCEWithLogitsLoss)
     else:

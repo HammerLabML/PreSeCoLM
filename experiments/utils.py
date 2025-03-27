@@ -129,7 +129,7 @@ def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str
 
     else:  # model_name in SUPPORTED_HUGGINGFACE_MODELS (already checked by assert)
         # load huggingface model and get embeddings (either loaded or computed)
-        if dataset.n_classes == 0: # twitterAAE does not have labels
+        if dataset.n_classes == 0:  # twitterAAE does not have labels
             n_classes = 2
         else:
             n_classes = dataset.n_classes
