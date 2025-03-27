@@ -14,7 +14,7 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir):
     pooling = lm.pooling
 
     if '/' in model_name:
-        model_name = model_name.replace('/','_')
+        model_name = model_name.replace('/', '_')
     save_file = (emb_dir+'%s_%s_%s_%s.pickle' % (dataset, split, model_name, pooling))
     if os.path.exists(save_file):
         print("load precomputed embeddings for %s set" % split)

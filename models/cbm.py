@@ -1,7 +1,5 @@
 from tqdm import tqdm
-
 import numpy as np
-
 from .classifier import Classifier, LinearClassifier
 import torch
 from torch.utils.data import TensorDataset, DataLoader
@@ -35,6 +33,7 @@ class CBM(torch.nn.Module):
         out = self.clf.forward(c)
         output = [out, c1]
         return output
+
 
 class CBMWrapper():
     

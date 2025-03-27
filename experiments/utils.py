@@ -17,7 +17,9 @@ SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "dist
                                 "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2",
                                 "gpt2", "gpt2-large", "distilgpt2",
                                 "roberta-base", "roberta-large", "distilroberta-base",
-                                "google/electra-small-discriminator", "google/electra-base-discriminator", "google/electra-large-discriminator"]
+                                "google/electra-small-discriminator", "google/electra-base-discriminator", "google/electra-large-discriminator",
+                                "EleutherAI/pythia-160m", "EleutherAI/pythia-410m", "EleutherAI/pythia-1b", "EleutherAI/pythia-1.4b"
+                                ]
 # possible other models (test):
 # "openai-gpt"
 # "xlm-roberta-base", "xlm-roberta-large",
@@ -104,6 +106,82 @@ def align_labels(y_test, y_pred, pred, label_test, label_pred):
     return y_test, y_pred, pred, label_test, label_pred
 
 
+def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str, pooling: str, batch_size: int,
+                                local_dir=None, defining_term_dict=None):
+    assert (model_name in SUPPORTED_OPENAI_MODELS or model_name in SUPPORTED_HUGGINGFACE_MODELS), "model '%s' is not among the supported openai or huggingface models!" % model_name
+
+    # load dataset
+    dataset = data_loader.get_dataset(dataset_name, local_dir)
+
+    # embed dataset and defining terms if given
+    emb_defining_attr_dict = None
+    if model_name in SUPPORTED_OPENAI_MODELS:
+        # try to load pre-computed embeddings of openai model
+        print("using openai models -> load precomputed embeddings...")
+        split_emb = {}
+        for split in dataset.splits:
+            data, _, _, _, _, _ = dataset.get_split(split)
+            split_emb[split] = models.get_embeddings(data, dataset_name, split, model_name, emb_dir)
+        dataset.set_preprocessed_data(split_emb)
+
+        if defining_term_dict is not None:
+            emb_defining_attr_dict = models.get_defining_term_embeddings(defining_term_dict, model_name, emb_dir)
+
+    else:  # model_name in SUPPORTED_HUGGINGFACE_MODELS (already checked by assert)
+        # load huggingface model and get embeddings (either loaded or computed)
+        if dataset.n_classes == 0: # twitterAAE does not have labels
+            n_classes = 2
+        else:
+            n_classes = dataset.n_classes
+        lm = models.get_pretrained_model(model_name, n_classes, batch_size=batch_size, pooling=pooling,
+                                         multi_label=dataset.multi_label)
+
+        split_emb = {}
+        for split in dataset.splits:
+            print("embed %s split..." % split)
+            data, _, _, _, _, _ = dataset.get_split(split)
+            split_emb[split] = models.load_or_compute_embeddings(data, lm, dataset_name, split, emb_dir)
+        dataset.set_preprocessed_data(split_emb)
+
+        if defining_term_dict is not None:
+            emb_defining_attr_dict = {attr: {} for attr in defining_term_dict.keys()}
+            # defining terms is a list of defining attr for different attributes (list[list[list]])
+            print("embed defining terms...")
+            for attr, dterm_dict in defining_term_dict.items():
+                for group, dterms in dterm_dict.items():
+                    emb_defining_attr_dict[attr][group] = lm.embed(dterms)
+        lm.model.to('cpu')
+        del lm
+
+    if defining_term_dict is not None:
+        return dataset, emb_defining_attr_dict
+    else:
+        return dataset
+
+
+def filter_group_labels(all_groups: list, sel_groups: list, group_lbl: np.ndarray):
+    if sel_groups is None or sel_groups == all_groups:
+        return group_lbl
+
+    msg = "group_lbl are either singe-label or do not match the number of groups"
+    assert type(group_lbl) is np.ndarray and group_lbl.ndim > 1 and group_lbl.shape[1] == len(all_groups), msg
+
+    print("filter group_lbl from ", all_groups, " to ", sel_groups)
+    filter_ids = [all_groups.index(group) for group in sel_groups]
+    group_lbl = np.squeeze(group_lbl[:, [filter_ids]])
+
+    msg = "group_lbl does not match the expected shape of [%i,%i], got %s instead" % (group_lbl.shape[0],
+                                                                                      len(sel_groups), group_lbl.shape)
+    assert type(group_lbl) is np.ndarray and group_lbl.ndim > 1 and group_lbl.shape[1] == len(sel_groups), msg
+
+    groups = [all_groups[idx] for idx in filter_ids]
+    if sel_groups is not None:
+        assert sel_groups == groups, "expected these groups: %s, but after filtering got: %s" % (sel_groups, groups)
+
+    return group_lbl, groups
+
+
+"""
 def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pooling: str, batch_size: int,
                                local_dir=None, defining_term_dict=None, sel_groups=None):
     assert (model_name in SUPPORTED_OPENAI_MODELS or model_name in SUPPORTED_HUGGINGFACE_MODELS), "model '%s' is not among the supported openai or huggingface models!" % model_name
@@ -167,3 +245,4 @@ def get_dataset_and_embeddings(emb_dir: str, dataset: str, model_name: str, pool
     return X_train, emb_train, y_train, g_train, X_test, emb_test, y_test, g_test, sel_groups, emb_defining_attr_dict, class_weights
 
 
+"""
