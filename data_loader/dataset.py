@@ -26,7 +26,6 @@ def label2onehot(y, minv=0, maxv=None):
 def compute_class_weights(y_train: np.ndarray, classes: list):
     # compute positive class weights (based on training data)
     samples_per_class = {lbl: np.sum(y_train[:, i]) for i, lbl in enumerate(classes)}
-    print(samples_per_class)
     n_samples = y_train.shape[0]
     # relative weight of 1s per class (compared to 0s not other classes!)
     class_weights = np.asarray([((n_samples - samples_per_class[lbl]) / samples_per_class[lbl]) for lbl in
@@ -34,8 +33,6 @@ def compute_class_weights(y_train: np.ndarray, classes: list):
 
     for lbl in classes:  # need to verify after filtering!
         assert samples_per_class[lbl] > 0, "no samples for class %s" % lbl
-
-    print(class_weights)
 
     return class_weights
 
@@ -69,6 +66,8 @@ class CustomDataset:
         self.n_per_fold = 0
         self.random_state = random_state
 
+        self.ids_for_cv = []
+        self.ids_per_fold = []
         self.data_folds = []
         self.data_prep_folds = []
         self.label_folds = []
@@ -100,7 +99,6 @@ class CustomDataset:
         assert len(self.class_names) == self.n_classes
 
         # compute class and group weights
-        print("compute class and group weights: ")
         for split in self.splits:
             if self.multi_label:
                 self.class_weights[split] = compute_class_weights(self.labels[split], self.class_names)
@@ -111,22 +109,19 @@ class CustomDataset:
         # set up CV folds if no train/test split is available
         if len(self.splits) == 1:
             self.n_per_fold = math.ceil(self.n_samples[self.splits[0]] / self.n_folds)
+            self.ids_for_cv = np.arange(self.n_samples[self.splits[0]])
             if not self.is_shuffled:
-                (self.data[self.splits[0]], self.labels[self.splits[0]],
-                 self.protected_groups[self.splits[0]]) = shuffle(self.data[self.splits[0]],
-                                                                  self.labels[self.splits[0]],
-                                                                  self.protected_groups[self.splits[0]],
-                                                                  random_state=self.random_state)
-            self.data_folds = [self.data[self.splits[0]][i:i + self.n_per_fold]
-                               for i in range(0, self.n_samples[self.splits[0]], self.n_per_fold)]
-            self.label_folds = [self.labels[self.splits[0]][i:i + self.n_per_fold, :]
-                                for i in range(0, self.n_samples[self.splits[0]], self.n_per_fold)]
-            self.group_folds = [self.protected_groups[self.splits[0]][i:i + self.n_per_fold, :]
-                                for i in range(0, self.n_samples[self.splits[0]], self.n_per_fold)]
+                self.ids_for_cv = shuffle(self.ids_for_cv, random_state=self.random_state)
+            self.ids_per_fold = [self.ids_for_cv[i:i + self.n_per_fold]
+                                 for i in range(0, len(self.ids_for_cv), self.n_per_fold)]
+            self.data_folds = [[self.data[self.splits[0]][idx] for idx in self.ids_per_fold[i]]
+                               for i in range(self.n_folds)]
+            self.label_folds = [self.labels[self.splits[0]][self.ids_per_fold[i], :] for i in range(self.n_folds)]
+            self.group_folds = [self.protected_groups[self.splits[0]][self.ids_per_fold[i], :]
+                                for i in range(self.n_folds)]
 
             # class weights per fold
             for fold_id in range(self.n_folds):
-                print("compute class and group weights for fold %i" % fold_id)
                 if self.multi_label:
                     self.class_weight_folds.append(compute_class_weights(self.label_folds[fold_id],
                                                                              self.class_names))
@@ -152,12 +147,29 @@ class CustomDataset:
     def load(self):
         pass
 
+    def set_cv_fold_preprocessed_data(self):
+        if len(self.splits) == 1:
+            if isinstance(self.data_preprocessed, np.ndarray):
+                self.data_prep_folds = [self.data_preprocessed[self.splits[0]][self.ids_per_fold[i], :]
+                                        for i in range(self.n_folds)]
+            else:  # list
+                self.data_prep_folds = [np.asarray([self.data_preprocessed[self.splits[0]][idx]
+                                                    for idx in self.ids_per_fold[i]])
+                                        for i in range(self.n_folds)]
+
     def preprocess_data(self, preprocess_fct: Callable):
         for split in self.splits:
             self.data_preprocessed[split] = preprocess_fct(self.data[split])
-        if len(self.splits) == 1:
-            self.data_prep_folds = [self.data_preprocessed[self.splits[0]][i:i + self.n_per_fold, :]
-                                    for i in range(0, self.n_samples[self.splits[0]], self.n_per_fold)]
+        print("preprocessed data has type: ", type(self.data_preprocessed[self.splits[0]]))
+        self.set_cv_fold_preprocessed_data()
+
+    def set_preprocessed_data(self, data_prep: dict):
+        for split in self.splits:
+            assert split in data_prep.keys()
+            assert len(self.data[split]) == len(data_prep[split])
+            self.data_preprocessed[split] = data_prep[split]
+        print("preprocessed data has type: ", type(self.data_preprocessed[self.splits[0]]))
+        self.set_cv_fold_preprocessed_data()
 
     def get_split(self, split: str):
         assert split in self.splits, ("tried to access a split that doesn't exist for this dataset: "

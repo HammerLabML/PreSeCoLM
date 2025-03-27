@@ -44,9 +44,6 @@ class StereoSet(CustomDataset):
 
         print("load Stereoset with option %s" % self.option)
         self.load(local_dir)
-        print(len(self.data['val']))
-        print(len(self.labels['val']))
-        print(len(self.protected_groups['val']))
         self.prepare()
 
     @staticmethod

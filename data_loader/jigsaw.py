@@ -17,12 +17,14 @@ class JigsawBias(CustomDataset):
         self.option = option
 
         self.name = 'jigsaw'
-        self.group_names = ['female', 'male', 'transgender', 'other_gender',
-                            'white', 'asian', 'black', 'latino', 'other_race_or_ethnicity',
-                            'atheist', 'buddhist', 'christian', 'hindu', 'jewish', 'muslim', 'other_religion',
-                            'heterosexual', 'bisexual', 'homosexual_gay_or_lesbian', 'other_sexual_orientation',
+        self.group_names = ['female', 'male', 'transgender',
+                            'white', 'asian', 'black', 'latino',
+                            'atheist', 'buddhist', 'christian', 'hindu', 'jewish', 'muslim',
+                            'heterosexual', 'bisexual', 'homosexual_gay_or_lesbian',
                             'intellectual_or_learning_disability', 'physical_disability',
-                            'psychiatric_or_mental_illness', 'other_disability']
+                            'psychiatric_or_mental_illness']
+        # removed the 'other*' labels, because there were no samples after filtering
+        # 'other_gender', 'other_disability', 'other_sexual_orientation', 'other_religion', 'other_race_or_ethnicity'
 
         print("load JigsawBias with option: %s" % self.option)
         self.load(local_dir)
