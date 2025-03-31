@@ -161,7 +161,18 @@ def evaluate_bias_space(defining_term_dict, dataset_test, model, pooling, batch_
     if 'any' in sel_groups_eval:
         sel_groups_eval_ = [group for group in sel_groups_eval if not group == 'any']
 
-    _, _, _, _, X_test, emb_test, y_test, g_test, groups, emb_defining_attr_dict, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, defining_term_dict=defining_term_dict, sel_groups=sel_groups_eval_)
+    # get the data (eval split)
+    dataset, emb_defining_attr_dict = utils.get_dataset_with_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, defining_term_dict)
+    # TODO: make sure this works with future datasets
+    # TODO: only test split or add dev split?
+    eval_split = 'test'
+    if len(dataset.splits) == 1:
+        eval_split = dataset.splits[0]
+
+    X_test, emb_test, y_test, g_test, _, _ = dataset.get_split(eval_split)
+    g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_eval_, g_test)
+
+    # compute concepts
     bias_space = BiasSpaceModel()
     bias_space.fit(emb_defining_attr_dict)
     #B = bias_space.get_concept_vectors()

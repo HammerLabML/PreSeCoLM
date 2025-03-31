@@ -34,6 +34,10 @@ def get_cav_savefile(cav_dir, dataset, model, pooling, file_suffix=None):
 
 
 def train_cav_train_test(emb_train, g_train, emb_test, g_test, file_name, groups):
+    if os.path.isfile(file_name):
+        print("cav savefile %s already exists" % file_name)
+        return
+
     print("fit CAV for %s" % file_name)
     print("with groups ", groups)
 
@@ -54,8 +58,9 @@ def train_cav_train_test(emb_train, g_train, emb_test, g_test, file_name, groups
 
 def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=None, sel_groups=None, file_suffix=None):
     file_name = get_cav_savefile(cav_dir, dataset, model, pooling, file_suffix)
-    if os.path.isfile(file_name):
-        print("cav savefile for %s, %s, %s, %s already exists" % (dataset, model, pooling, file_suffix))
+
+    if os.path.isfile(file_name): # this only works for non-cv datasets
+        print("cav savefile %s already exists" % file_name)
         return
 
     dataset = utils.get_dataset_with_embeddings(emb_dir, dataset, model, pooling, batch_size, local_dir)
@@ -96,7 +101,7 @@ def eval_cav_on_test_split(file_name, emb_test, g_test, groups_train, groups_tes
     cavs = save_dict['cavs']
 
     if groups_train is not None:
-        err_msg = "loaded CAVs, but the groups from savefile (%s) do not match the selected groups (%s)" % (save_dict['labels'], sel_groups_train)
+        err_msg = "loaded CAVs, but the groups from savefile (%s) do not match the selected groups (%s)" % (save_dict['labels'], groups_train)
         if len(save_dict['labels']) == 1 and len(groups_train) == 2:
             single_label = "%s/%s" % (groups_train[0], groups_train[1])
             assert save_dict['labels'][0] == single_label, err_msg
@@ -110,8 +115,10 @@ def eval_cav_on_test_split(file_name, emb_test, g_test, groups_train, groups_tes
     g_pred = (pred > 0).astype('int')
 
     # test if we can get rid of single-label to onehot conversion
-    assert not utils.is1D(g_test)
-    assert not utils.is1D(g_pred)
+    print(g_test.shape, groups_test)
+    print(g_pred.shape, groups_train)
+    assert g_test.shape[1] == len(groups_test)
+#    assert g_pred.shape[1] == len(groups_train)
 
     # in cross-dataset transfer evaluations, we might need to test single-labels vs. multi-labels
     # the single-labels are converted to one-hot encoding
@@ -155,6 +162,8 @@ def eval_cav_on_test_split(file_name, emb_test, g_test, groups_train, groups_tes
     # train and test labels are already aligned
     # compute F1-score and Pearson correlation
     f1 = f1_score(c_test, c_pred, average='macro')
+    print("concept F1 score: %.2f" % f1_score(c_test, c_pred, average='macro'))
+    print("concept F1 score: %.2f" % f1_score(c_test, c_pred, average='macro'))
 
     if not utils.is1D(pred_):  # both > 1D
         cav_corr = scipy.stats.pearsonr(pred_, np.asarray(c_test_))
@@ -165,10 +174,12 @@ def eval_cav_on_test_split(file_name, emb_test, g_test, groups_train, groups_tes
     plotting.plot_feature_histogram(pred_, c_test_, labels=groups_test_, features=groups_train_,
                                     xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
 
+    print("concept correlation: ", cav_corr.statistic)
     return f1, cav_corr, groups_train_, groups_test_
 
 
-def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_dir, cav_dir, plot_dir, local_dir=None, sel_groups_train=None, sel_groups_test=None, file_suffix=None):
+def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_dir, cav_dir, plot_dir, local_dir=None,
+                  local_dir_train=None, sel_groups_train=None, sel_groups_test=None, file_suffix=None):
     # check if 'any' label specified
     add_labels = (sel_groups_test[0] == 'any')
     sel_groups_test_ = [group for group in sel_groups_test if not group == 'any']
@@ -178,6 +189,15 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         sel_groups_train_ = sel_groups_train
 
     file_name = get_cav_savefile(cav_dir, dataset_train, model, pooling, file_suffix)
+
+    # get the training dataset to determine if it has CV splits
+    dataset_tr = data_loader.get_dataset(dataset_train, local_dir_train)
+    if len(dataset_tr.splits) == 1:
+        file_names = [file_name.replace('.pickle', '_%iof%i.pickle' % (fold_id, dataset_tr.n_folds))
+                      for fold_id in range(dataset_tr.n_folds)]
+    else:
+        file_names = [file_name]
+    print("cav model files for train case: ", file_names)
 
     # plot savefile
     model_name = model.replace('/', '_')
@@ -199,48 +219,60 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     groups_train_ = None
     groups_test_ = None
     if len(dataset.splits) == 1:
-        print("single-split dataset - train CAV for each CV split")
+        print("single-split dataset - iterate over each CV split")
         f1s = []
         rs = []
         ps = []
         for fold_id in range(dataset.n_folds):
             data_dict = dataset.get_cv_split(fold_id)
-            #X_train, emb_train, y_train, g_train, cw, gw = data_dict['train']
             X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
-            #g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups_train_, g_train)
             g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
 
-            file_name_fold = file_name.replace('.pickle', '_%iof%i.pickle' % (fold_id, dataset.n_folds))
-            plot_savefile_fold = plot_savefile.replace('.png', '_%iof%i.png' % (fold_id, dataset.n_folds))
-
-            cur_f1, cur_corr, groups_train_, groups_test_ = eval_cav_on_test_split(file_name_fold, emb_test, g_test,
-                                                                                   sel_groups_train_, sel_groups_test_,
-                                                                                   add_labels, plot_savefile,
-                                                                                   dataset_train, dataset_test)
-            f1s.append(cur_f1)
-            rs.append(cur_corr.statistic)
-            ps.append(cur_corr.p_value)
+            for i, cur_file_name in enumerate(file_names):
+                plot_savefile_fold = plot_savefile.replace('.png', '_%iof%i_%i.png'
+                                                           % (fold_id, dataset.n_folds, i))
+                cur_f1, cur_corr, groups_train_, groups_test_ = eval_cav_on_test_split(cur_file_name, emb_test, g_test,
+                                                                                       sel_groups_train_, sel_groups_test_,
+                                                                                       add_labels, plot_savefile_fold,
+                                                                                       dataset_train, dataset_test)
+                f1s.append(cur_f1)
+                rs.append(cur_corr.statistic)
+                ps.append(cur_corr.pvalue)
 
         f1 = np.mean(f1s)
         # corr might be a list of correlations per group
         r_val = np.mean(rs, axis=0)
         p_val = np.mean(ps, axis=0)
-        if type(rs[0]) is not list:
+        if type(rs[0]) is not list and not type(rs[0]) is np.ndarray:
             print("after %i folds of crossval got F1 = %.2f +/- %.2f, R = %.2f +/- %.2f, "
                   "p = %.2f +/- %.2f" % (dataset.n_folds, f1, np.std(f1s), r_val, np.std(rs), p_val, np.std(ps)))
     else:
+        print("multi-split dataset, load only the test split")
         # TODO: check later if new datasets use the same split names
         # TODO: what to do with dev split? combine with test split?
-        #X_train, emb_train, y_train, g_train, cw, gw = dataset.get_split('train')
         X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
-        #g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups_train_, g_train)
         g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
 
-        f1, corr, groups_train_, groups_test_ = eval_cav_on_test_split(file_name, emb_test, g_test, sel_groups_train_,
-                                                                       sel_groups_test_, add_labels, plot_savefile,
-                                                                       dataset_train, dataset_test)
-        r_val = corr.statistic
-        p_val = corr.p_value
+        f1s = []
+        rs = []
+        ps = []
+        for i, cur_file_name in enumerate(file_names):  # might need to iterate through cv splits of training dataset
+            plot_savefile_fold = plot_savefile.replace('.png', '_%i.png' % i)
+            cur_f1, cur_corr, groups_train_, groups_test_ = eval_cav_on_test_split(cur_file_name, emb_test, g_test,
+                                                                                   sel_groups_train_, sel_groups_test_,
+                                                                                   add_labels, plot_savefile_fold,
+                                                                                   dataset_train, dataset_test)
+            f1s.append(cur_f1)
+            rs.append(cur_corr.statistic)
+            ps.append(cur_corr.pvalue)
+
+        f1 = np.mean(f1s)
+        # corr might be a list of correlations per group
+        r_val = np.mean(rs, axis=0)
+        p_val = np.mean(ps, axis=0)
+        if type(rs[0]) is not list and not type(rs[0]) is np.ndarray:
+            print("after %i folds of crossval got F1 = %.2f +/- %.2f, R = %.2f +/- %.2f, "
+                  "p = %.2f +/- %.2f" % (dataset.n_folds, f1, np.std(f1s), r_val, np.std(rs), p_val, np.std(ps)))
 
     return f1, r_val, p_val, groups_train_, groups_test_
 
@@ -318,8 +350,8 @@ def run_cav_eval(config):
                 for train_setup in eval_setups:
                     for eval_setup in eval_setups:
                         # skip 'same dataset' cases where no training data is available
-                        if train_setup['dataset'] == eval_setup['dataset'] and eval_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
-                            continue  # no training data available for twitterAAE and crowspairs (TODO CV on test data)
+                        #if train_setup['dataset'] == eval_setup['dataset'] and eval_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
+                        #    continue  # no training data available for twitterAAE and crowspairs (TODO CV on test data)
 
                         # create filter to determine if this setup has already been evaluated
                         if pool == '':
@@ -334,7 +366,16 @@ def run_cav_eval(config):
                             print("testing %s features on %s" % (train_setup['dataset'], eval_setup['dataset']))
 
                             # run eval
-                            f1, r_val, p_val, groups_train, groups_eval = evaluate_cavs(train_setup['dataset'], eval_setup['dataset'], model, pool, batch_size, config["embedding_dir"], config["cav_dir"], config["plot_dir"], local_dir=eval_setup['local_dir'], sel_groups_train=train_setup['groups'], sel_groups_test=eval_setup['groups'], file_suffix=train_setup['suffix'])
+                            (f1, r_val, p_val,
+                             groups_train, groups_eval) = evaluate_cavs(train_setup['dataset'],  eval_setup['dataset'],
+                                                                        model, pool, batch_size,
+                                                                        config["embedding_dir"], config["cav_dir"],
+                                                                        config["plot_dir"],
+                                                                        local_dir=eval_setup['local_dir'],
+                                                                        local_dir_train=train_setup['local_dir'],
+                                                                        sel_groups_train=train_setup['groups'],
+                                                                        sel_groups_test=eval_setup['groups'],
+                                                                        file_suffix=train_setup['suffix'])
 
                             if len(groups_train) == 1:
                                 group = groups_train[0]
@@ -349,7 +390,7 @@ def run_cav_eval(config):
                                                                                eval_setup['dataset'], model, pool, groups_eval[i],
                                                                                group, f1, r_val[i], p_val[i]]
 
-            results_cav.to_csv(results_cav_path, index=False)
+                        results_cav.to_csv(results_cav_path, index=False)
 
 
 def main(argv):

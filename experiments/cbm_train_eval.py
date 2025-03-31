@@ -42,31 +42,24 @@ def get_cbm_savefile(cbm_dir, dataset, model, pooling, file_suffix=None):
     return checkpoint_file, params_file
 
 
-def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, local_dir=None, sel_groups=None, file_suffix=None, lambda_concept=0.5, use_concept_weights=False, lr=1e-4, epochs=80):
+def train_cbm_train_test(emb_train, y_train, g_train, emb_test, y_test, g_test, groups, concept_weights,
+                         class_weights, params_file, checkpoint_file, lc_savefile):
+    # could use dev set to determine these
+    lambda_concept = 0.5
+    lr = 1e-4
+    epochs = 80
+
     # check if checkpoint for this CBM exists already
-    checkpoint_file, params_file = get_cbm_savefile(cbm_dir, dataset, model, pooling, file_suffix)
     if os.path.isfile(checkpoint_file) and os.path.isfile(params_file):
-        print("cbm checkpoint and parameter file for %s, %s, %s, %s already exists" % (dataset, model, pooling, file_suffix))
+        print("cbm checkpoint and parameter file %s, %s already exist" % (checkpoint_file, params_file))
         return
     else:
         print("checkpoint and/ or parameter file not found: %s, %s" % (checkpoint_file, params_file))
 
-    # get data and embeddings
-    X_train, emb_train, y_train, g_train, X_test, emb_test, y_test, g_test, groups, _, class_weights = utils.get_dataset_and_embeddings(emb_dir, dataset, model, pooling, batch_size, local_dir, sel_groups=sel_groups)
-    n_classes, multi_label = utils.get_number_of_classes(y_test)
-    
-    if sel_groups is not None:
-        assert sel_groups == groups, ("expected %s, instead got %s " % (sel_groups, groups))
-
-    # data_loader with binary group labels provide only 1D labels for two groups; adjust label accordingly
-    # in this case, group labels will be learned as single label and are converted to multi-label for evaluation
-    if len(groups) == 2 and (g_test.ndim == 1 or g_test.shape[1] == 1):
-        groups = [groups[0] + '/' + groups[1]]
-
     # determine criterion and prepare class labels for torch model; for multi-labels class weights are applied
-    print("fit CBM for %s, %s, %s (%s)" % (dataset, model, pooling, file_suffix))
-    print("with groups ", groups)
+    print("fit CBM with groups ", groups)
 
+    n_classes, multi_label = utils.get_number_of_classes(y_test)
     if multi_label or n_classes == 2:
         print("binary (multi) label: use BCEWithLogitsLoss")
         criterion = torch.nn.BCEWithLogitsLoss
@@ -78,27 +71,20 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
         y_train = y_train.flatten().astype('int')
         y_test = y_test.flatten().astype('int')
 
-    # some data_loader do not have a training split
-    if len(g_train) == 0 or len(y_train) == 0:
-        print("got no training data to fit CBM")
-        return
-
-    # compute concept weights, prepare concept labels
-    if use_concept_weights:
-        concept_weights = data_loader.compute_class_weights(g_train, sel_groups)
-    else:
-        concept_weights = None
+    # prepare concept labels
     c_train = data_loader.label2onehot(g_train)
     c_test = data_loader.label2onehot(g_test)
 
     # init model params
-    model_params = {'input_size': emb_train.shape[1], 'output_size': n_classes, 'n_learned_concepts': c_train.shape[1], 'n_other_concepts': emb_train.shape[1]-c_train.shape[1], 'hidden_size': 300}
+    model_params = {'input_size': emb_train.shape[1], 'output_size': n_classes, 'n_learned_concepts': c_train.shape[1],
+                    'n_other_concepts': emb_train.shape[1] - c_train.shape[1], 'hidden_size': 300}
     print("train CBM with params:")
     print(model_params)
-    
+
     cbm = models.CBM(**model_params)
     cbmWrapper = models.CBMWrapper(cbm, batch_size=64, class_weights=class_weights, criterion=criterion,
-                            concept_criterion=torch.nn.BCEWithLogitsLoss, lr=lr, lambda_concept=lambda_concept, concept_weights=concept_weights)
+                                   concept_criterion=torch.nn.BCEWithLogitsLoss, lr=lr, lambda_concept=lambda_concept,
+                                   concept_weights=concept_weights)
 
     # train and remember class/ concept scores for each epoch
     f1s_c = []
@@ -109,28 +95,24 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
 
         if multi_label:
             y_pred = (np.array(pred) >= 0.5).astype(int)
-        else: 
+        else:
             y_pred = np.argmax(pred, axis=1)
         c_pred = (np.array(concepts) >= 0.5).astype(int)
-        
+
         f1_concept = f1_score(c_test, c_pred, average='macro')
         f1_pred = f1_score(y_test, y_pred, average='macro')
         f1s_c.append(f1_concept)
         f1s_p.append(f1_pred)
 
     print(f1s_p)
-    learning_curve_dir = '%s/cbm_learning_curves/' % plot_dir
-    if not os.path.isdir(learning_curve_dir):
-        os.makedirs(learning_curve_dir)
 
     # plot learning curve for class and concept F1-score
     x = np.arange(len(f1s_c))
     fig, ax = plt.subplots()
-    ax.plot(x,f1s_c,label='concept F1')
-    ax.plot(x,f1s_p,label='pred F1')
+    ax.plot(x, f1s_c, label='concept F1')
+    ax.plot(x, f1s_p, label='pred F1')
     ax.legend()
-    savefile = ('%s/%s_%s_%s_%s.png' % (learning_curve_dir, dataset, model.replace('/','_'), pooling, file_suffix))
-    plt.savefig(savefile, bbox_inches='tight')
+    plt.savefig(lc_savefile, bbox_inches='tight')
 
     # save model
     torch.save(cbm.state_dict(), checkpoint_file)
@@ -138,21 +120,71 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
         pickle.dump(model_params, handle)
 
 
-def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, local_dir=None, sel_groups_train=None, sel_groups_test=None, file_suffix=None):
-    # check if 'any' label specified
-    add_labels = (sel_groups_test[0] == 'any')
-    sel_groups_test_ = [group for group in sel_groups_test if not group == 'any']
+def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, local_dir=None, sel_groups=None,
+               file_suffix=None):  # lambda_concept=0.5, use_concept_weights=False, lr=1e-4, epochs=80
+    learning_curve_dir = '%s/cbm_learning_curves/' % plot_dir
+    if not os.path.isdir(learning_curve_dir):
+        os.makedirs(learning_curve_dir)
 
-    # verify checkpoint exists
-    checkpoint_file, params_file = get_cbm_savefile(cbm_dir, dataset_train, model, pooling, '')
-    if not os.path.isfile(checkpoint_file):
-        print("could not find CBM checkpoint for %s %s %s" % (dataset_train, model, pooling))
-        print(checkpoint_file)
+    checkpoint_file, params_file = get_cbm_savefile(cbm_dir, dataset, model, pooling, file_suffix)
+    lc_savefile = ('%s/%s_%s_%s_%s.png' % (learning_curve_dir, dataset, model.replace('/', '_'), pooling, file_suffix))
+
+    # check if cbm checkpoint exists (does not cover cv datasets)
+    if os.path.isfile(checkpoint_file) and os.path.isfile(params_file):
+        print("cbm checkpoint and parameter file %s, %s already exist" % (checkpoint_file, params_file))
         return
+    else:
+        print("checkpoint and/ or parameter file not found: %s, %s" % (checkpoint_file, params_file))
 
-    # load test dataset and get embeddings
-    _, _, _, _, X_test, emb_test, y_test, g_test, groups_test, _, _ = utils.get_dataset_and_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir, sel_groups=sel_groups_test_)
-    n_classes, multi_label = utils.get_number_of_classes(y_test)
+    # get dataset and embeddings
+    dataset = utils.get_dataset_with_embeddings(emb_dir, dataset, model, pooling, batch_size, local_dir)
+
+    if len(dataset.splits) == 1:
+        print("single-split dataset - train CAV for each CV split")
+        for fold_id in range(dataset.n_folds):
+            data_dict = dataset.get_cv_split(fold_id)
+            X_train, emb_train, y_train, g_train, class_weights, group_weights = data_dict['train']
+            X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
+            g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
+            g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+
+            checkpoint_file_fold = checkpoint_file + ('_%iof%i' % (fold_id, dataset.n_folds))
+            params_file_fold = params_file.replace('.pickle', '_%iof%i.pickle' % (fold_id, dataset.n_folds))
+            lc_savefile_fold = lc_savefile.replace('.png', '_%iof%i.png' % (fold_id, dataset.n_folds))
+            train_cbm_train_test(emb_train, y_train, g_train, emb_test, y_test, g_test, sel_groups, group_weights,
+                                 class_weights, params_file_fold, checkpoint_file_fold, lc_savefile_fold)
+    else:
+        # TODO: check later if new datasets use the same split names
+        # TODO: what to do with dev split? combine with test split?
+        X_train, emb_train, y_train, g_train, class_weights, group_weights = dataset.get_split('train')
+        X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
+        g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
+        g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+
+        train_cbm_train_test(emb_train, y_train, g_train, emb_test, y_test, g_test, sel_groups, group_weights,
+                             class_weights, params_file, checkpoint_file, lc_savefile)
+
+        # TODO: hopefully not necessary anymore:
+        # data_loader with binary group labels provide only 1D labels for two groups; adjust label accordingly
+        # in this case, group labels will be learned as single label and are converted to multi-label for evaluation
+        # if len(groups) == 2 and (g_test.ndim == 1 or g_test.shape[1] == 1):
+        #    groups = [groups[0]+'/'+groups[1]]
+
+
+def eval_cbm_on_test_split(emb_test, g_test, checkpoint_file, params_file, groups_train, groups_test, add_labels, plot_savefile,
+                           dataset_train, dataset_test):
+    # load model and parameters
+    with open(params_file, "rb") as handle:
+        model_params = pickle.load(handle)
+
+    cbm = models.CBM(**model_params)
+    with open(checkpoint_file, "rb") as handle:
+        cbm.load_state_dict(torch.load(checkpoint_file, weights_only=True))
+
+    # wrapper only needed for predict call, most params don't matter
+    cbmWrapper = models.CBMWrapper(cbm, batch_size=32, class_weights=None, criterion=torch.nn.BCEWithLogitsLoss,
+                                   concept_criterion=torch.nn.BCEWithLogitsLoss, lr=1e-4, lambda_concept=0.5,
+                                   concept_weights=None)
 
     # concepts encoded as onehot
     if len(groups_test) == 1:
@@ -165,37 +197,29 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
 
     # with onehot encoding number of test groups and shape of test concepts should match
     # the number of training groups might be larger
-    assert n_concepts <= len(sel_groups_train) and n_concepts == len(groups_test)
-
-    # load model and parameters
-    with open(params_file, "rb") as handle:
-        model_params = pickle.load(handle)
-        
-    cbm = models.CBM(**model_params)
-    with open(checkpoint_file, "rb") as handle:
-        cbm.load_state_dict(torch.load(checkpoint_file, weights_only=True))
-        
-    # wrapper only needed for predict call, most params don't matter
-    cbmWrapper = models.CBMWrapper(cbm, batch_size=32, class_weights=None, criterion=torch.nn.BCEWithLogitsLoss,
-                            concept_criterion=torch.nn.BCEWithLogitsLoss, lr=1e-4, lambda_concept=0.5, concept_weights=None)
+    assert n_concepts <= len(groups_train) and n_concepts == len(groups_test), ("number of concepts (%i) does not match"
+                                                                                " number of train (%i) /test groups "
+                                                                                "(%i) ") % (n_concepts,
+                                                                                            len(groups_train),
+                                                                                            len(groups_test))
 
     # get concept predictions
     _, concepts = cbmWrapper.predict(emb_test)
     c_pred = (np.array(concepts) >= 0).astype(int)  # concept scores are logits!
 
-    # handle different dimensionality of test and predicted ocncepts
+    # handle different dimensionality of test and predicted concepts
     if not utils.is1D(c_test) and utils.is1D(c_pred):
         print("convert 1d prediction to onehot")
         c_pred = data_loader.label2onehot(c_pred, minv=int(np.min(c_test)), maxv=int(np.max(c_test)))
         concepts = np.hstack([-concepts, concepts])
-        assert len(sel_groups_train) == 2
+        assert len(groups_train) == 2
     if utils.is1D(c_test) and not utils.is1D(c_pred):
         print("convert 1d test labels to onehot")
         c_test = data_loader.label2onehot(c_test)
 
     # align labels
     c_test, c_pred, concepts, groups_test, groups_train = utils.align_labels(c_test, c_pred, concepts, groups_test,
-                                                                             sel_groups_train)
+                                                                             groups_train)
 
     # add any- and contrastive labels for further eval
     if add_labels:
@@ -218,7 +242,33 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         corr = scipy.stats.pearsonr(concepts_.flatten(), c_test_.flatten())
 
     # plot histograms for all test groups (1 or 0) against all predicted concepts, save plot
-    model_name = model.replace('/','_')
+    plotting.plot_feature_histogram(concepts_, c_test_, labels=groups_test_, features=groups_train_,
+                                    xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
+
+    return f1, corr, groups_train_, groups_test_
+
+
+def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, local_dir=None,
+                  local_dir_train=None, sel_groups_train=None, sel_groups_test=None, file_suffix=None):
+    # check if 'any' label specified
+    add_labels = (sel_groups_test[0] == 'any')
+    sel_groups_test_ = [group for group in sel_groups_test if not group == 'any']
+
+    checkpoint_file, params_file = get_cbm_savefile(cbm_dir, dataset_train, model, pooling, '')
+
+    # get the training dataset to determine if it has CV splits
+    dataset_tr = data_loader.get_dataset(dataset_train, local_dir_train)
+    if len(dataset_tr.splits) == 1:
+        file_names = []
+        for fold_id in range(dataset_tr.n_folds):
+            checkpoint_file_fold = checkpoint_file + ('_%iof%i' % (fold_id, dataset_tr.n_folds))
+            params_file_fold = params_file.replace('.pickle', '_%iof%i.pickle' % (fold_id, dataset_tr.n_folds))
+            file_names.append((checkpoint_file_fold, params_file_fold))
+    else:
+        file_names = [(checkpoint_file, params_file)]
+    print("cbm checkpoint/param files for train case: ", file_names)
+
+    model_name = model.replace('/', '_')
     plot_dir = '%s/cbm_eval' % plot_dir
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
@@ -228,10 +278,86 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
     else:
         plot_savefile = ('%s/%s_%s_%s_%s.png' % (plot_dir, dataset_train, dataset_test, model_name, pooling))
 
-    plotting.plot_feature_histogram(concepts_, c_test_, labels=groups_test_, features=groups_train_,
-                                    xlabel=dataset_train, ylabel=dataset_test, savefile=plot_savefile)
+    # get the eval dataset + embeddings
+    dataset = utils.get_dataset_with_embeddings(emb_dir, dataset_test, model, pooling, batch_size, local_dir)
 
-    return f1, corr, groups_train_, groups_test_
+    f1 = None
+    r_val = None
+    p_val = None
+    groups_train_ = None
+    groups_test_ = None
+    if len(dataset.splits) == 1:
+        print("single-split dataset - train CBM for each CV split")
+        f1s = []
+        rs = []
+        ps = []
+        for fold_id in range(dataset.n_folds):
+            plot_savefile_fold = plot_savefile.replace('.png', '_%iof%i.png' % (fold_id, dataset.n_folds))
+
+            data_dict = dataset.get_cv_split(fold_id)
+            X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
+            g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
+
+            for i, cur_file_name in enumerate(file_names):
+                (checkpoint_file_fold, params_file_fold) = cur_file_name
+                plot_savefile_fold_ = plot_savefile_fold.replace('.png', '_%i.png' % i)
+
+                if not os.path.isfile(checkpoint_file_fold):
+                    print("could not find CBM checkpoint for %s %s %s" % (dataset_train, model, pooling))
+                    print(checkpoint_file)
+                    return
+
+                (cur_f1, cur_corr,
+                 groups_train_, groups_test_) = eval_cbm_on_test_split(emb_test, g_test, checkpoint_file_fold,
+                                                                       params_file_fold, sel_groups_train,
+                                                                       sel_groups_test_, add_labels, plot_savefile_fold_,
+                                                                       dataset_train, dataset_test)
+                f1s.append(cur_f1)
+                rs.append(cur_corr.statistic)
+                ps.append(cur_corr.pvalue)
+
+        f1 = np.mean(f1s)
+        # corr might be a list of correlations per group
+        r_val = np.mean(rs, axis=0)
+        p_val = np.mean(ps, axis=0)
+        if type(rs[0]) is not list and not type(rs[0]) is np.ndarray:
+            print("after %i folds of crossval got F1 = %.2f +/- %.2f, R = %.2f +/- %.2f, "
+                  "p = %.2f +/- %.2f" % (dataset.n_folds, f1, np.std(f1s), r_val, np.std(rs), p_val, np.std(ps)))
+    else:
+        if not os.path.isfile(checkpoint_file):
+            print("could not find CBM checkpoint for %s %s %s" % (dataset_train, model, pooling))
+            print(checkpoint_file)
+            return
+        # TODO: check later if new datasets use the same split names
+        # TODO: what to do with dev split? combine with test split?
+        X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
+        g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
+
+        f1s = []
+        rs = []
+        ps = []
+        for i, cur_file_name in enumerate(file_names):  # might need to iterate through cv splits of training dataset
+            (checkpoint_file_fold, params_file_fold) = cur_file_name
+            plot_savefile_fold = plot_savefile.replace('.png', '_%i.png' % i)
+            cur_f1, cur_corr, groups_train_, groups_test_ = eval_cbm_on_test_split(emb_test, g_test,
+                                                                                   checkpoint_file_fold,
+                                                                                   params_file_fold, sel_groups_train,
+                                                                                   sel_groups_test_, add_labels,
+                                                                                   plot_savefile_fold, dataset_train,
+                                                                                   dataset_test)
+            f1s.append(cur_f1)
+            rs.append(cur_corr.statistic)
+            ps.append(cur_corr.pvalue)
+
+        f1 = np.mean(f1s)
+        # corr might be a list of correlations per group
+        r_val = np.mean(rs, axis=0)
+        p_val = np.mean(ps, axis=0)
+        if type(rs[0]) is not list and not type(rs[0]) is np.ndarray:
+            print("after %i folds of crossval got F1 = %.2f +/- %.2f, R = %.2f +/- %.2f, "
+                  "p = %.2f +/- %.2f" % (dataset.n_folds, f1, np.std(f1s), r_val, np.std(rs), p_val, np.std(ps)))
+
+    return f1, r_val, p_val, groups_train_, groups_test_
 
 
 def run_cbm_training(config):
@@ -326,8 +452,8 @@ def run_cbm_eval(config):
                     for eval_setup in eval_setups:
                             
                         # skip 'same dataset' cases where no training data is available
-                        if train_setup['dataset'] == eval_setup['dataset'] and eval_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
-                            continue  # no training data available for twitterAAE and crowspairs (TODO CV on test data)
+                        #if train_setup['dataset'] == eval_setup['dataset'] and eval_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
+                        #    continue  # no training data available for twitterAAE and crowspairs (TODO CV on test data)
 
                         # create filter to determine if this setup has already been evaluated
                         if pool == '':
@@ -342,24 +468,31 @@ def run_cbm_eval(config):
                             print("testing %s features on %s" % (train_setup['dataset'], eval_setup['dataset']))
 
                             # run eval
-                            f1, corr, groups_train, groups_eval = evaluate_cbms(train_setup['dataset'], eval_setup['dataset'], model, pool, batch_size, config["embedding_dir"], config["cbm_dir"], config["plot_dir"], local_dir=eval_setup['local_dir'], sel_groups_train=train_setup['groups'], sel_groups_test=eval_setup['groups'], file_suffix=train_setup['suffix'])
+                            (f1, r_val, p_val, groups_train,
+                             groups_eval) = evaluate_cbms(train_setup['dataset'], eval_setup['dataset'], model, pool,
+                                                          batch_size, config["embedding_dir"], config["cbm_dir"],
+                                                          config["plot_dir"], local_dir=eval_setup['local_dir'],
+                                                          local_dir_train=train_setup['local_dir'],
+                                                          sel_groups_train=train_setup['groups'],
+                                                          sel_groups_test=eval_setup['groups'],
+                                                          file_suffix=train_setup['suffix'])
 
                             if len(groups_train) == 1:
                                 group = groups_train[0]
                                 results_cbm.loc[len(results_cbm.index)] = [attr, train_setup['dataset'],
                                                                            eval_setup['dataset'], model, pool, group,
-                                                                           group, f1, corr.statistic, corr.pvalue]
+                                                                           group, f1, r_val, p_val]
                             else:
-                                assert len(groups_train) == len(corr.statistic), (
+                                assert len(groups_train) == len(r_val), (
                                             "list of groups and correlation results do not match: %i / %i" % (
-                                    len(groups_train), len(corr.statistic)))
+                                                len(groups_train), len(r_val)))
                                 # save results to dataframe (one row per group)
                                 for i, group in enumerate(groups_train):
                                     results_cbm.loc[len(results_cbm.index)] = [attr, train_setup['dataset'],
                                                                                eval_setup['dataset'], model, pool, groups_eval[i],
-                                                                               group, f1, corr.statistic[i], corr.pvalue[i]]
+                                                                               group, f1, r_val[i], p_val[i]]
 
-            results_cbm.to_csv(results_cbm_path, index=False)
+                        results_cbm.to_csv(results_cbm_path, index=False)
 
 
 def main(argv):

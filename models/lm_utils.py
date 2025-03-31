@@ -20,7 +20,7 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir):
         print("load precomputed embeddings for %s set" % split)
         with open(save_file, 'rb') as handle:
             embeddings = pickle.load(handle)
-        assert len(embeddings) == len(texts)
+        assert len(embeddings) == len(texts), "size mismatch of embeddings (%i) and texts (%i)" % (len(embeddings), len(texts))
 
     else:
         print("could not find %s" % save_file)

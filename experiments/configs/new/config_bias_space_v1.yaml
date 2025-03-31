@@ -370,3 +370,13 @@ dialect:
       - y'all coming to the party
       - she run fast
       - it's a lot of people here
+  eval:
+  - dataset: twitterAAE
+    groups:
+    - aa
+    - white
+    groups_pie:
+    - black
+    - white
+  - local_dir: null
+  - suffix: ''
