@@ -31,7 +31,8 @@ SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "dist
 # TODO: move to some config
 LABEL_MATCHES = {'black': 'aa', 'aa': 'black', 'M': 'male', 'male': 'M', 'F': 'female', 'female': 'F',
                  'homosexual_gay_or_lesbian': 'homosexual', 'homosexual': 'homosexual_gay_or_lesbian',
-                 'psychiatric_or_mental_illness': 'mental_disability_illness', 'mental_disability_illness': 'psychiatric_or_mental_illness'}
+                 'psychiatric_or_mental_illness': 'mental_disability_illness', 'mental_disability_illness': 'psychiatric_or_mental_illness',
+                 'european/white': 'white', 'white': 'european/white', 'african/black': 'black', 'black': 'african/black', 'south east asian': 'asian', 'asian': 'south east asian'}
 
 
 def add_contrastive_any_labels(g_test, group_names):
@@ -161,18 +162,21 @@ def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str
 
 def filter_group_labels(all_groups: list, sel_groups: list, group_lbl: np.ndarray):
     if sel_groups is None or sel_groups == all_groups:
-        return group_lbl
+        return group_lbl, sel_groups
 
     msg = "group_lbl are either singe-label or do not match the number of groups"
     assert type(group_lbl) is np.ndarray and group_lbl.ndim > 1 and group_lbl.shape[1] == len(all_groups), msg
 
-    print("filter group_lbl from ", all_groups, " to ", sel_groups)
+    #print("filter group_lbl from ", all_groups, " to ", sel_groups)
     filter_ids = [all_groups.index(group) for group in sel_groups]
     group_lbl = np.squeeze(group_lbl[:, [filter_ids]])
 
+    if group_lbl.ndim == 1:
+        group_lbl = group_lbl.reshape(-1,1)
+
     msg = "group_lbl does not match the expected shape of [%i,%i], got %s instead" % (group_lbl.shape[0],
                                                                                       len(sel_groups), group_lbl.shape)
-    assert type(group_lbl) is np.ndarray and group_lbl.ndim > 1 and group_lbl.shape[1] == len(sel_groups), msg
+    assert type(group_lbl) is np.ndarray and group_lbl.shape[1] == len(sel_groups), msg
 
     groups = [all_groups[idx] for idx in filter_ids]
     if sel_groups is not None:
