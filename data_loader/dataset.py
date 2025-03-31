@@ -160,7 +160,7 @@ class CustomDataset:
     def preprocess_data(self, preprocess_fct: Callable):
         for split in self.splits:
             self.data_preprocessed[split] = preprocess_fct(self.data[split])
-        print("preprocessed data has type: ", type(self.data_preprocessed[self.splits[0]]))
+        #print("preprocessed data has type: ", type(self.data_preprocessed[self.splits[0]]))
         self.set_cv_fold_preprocessed_data()
 
     def set_preprocessed_data(self, data_prep: dict):
@@ -168,7 +168,7 @@ class CustomDataset:
             assert split in data_prep.keys()
             assert len(self.data[split]) == len(data_prep[split])
             self.data_preprocessed[split] = data_prep[split]
-        print("preprocessed data has type: ", type(self.data_preprocessed[self.splits[0]]))
+        #print("preprocessed data has type: ", type(self.data_preprocessed[self.splits[0]]))
         self.set_cv_fold_preprocessed_data()
 
     def get_split(self, split: str):
