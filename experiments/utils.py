@@ -18,8 +18,8 @@ SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "dist
                                 "gpt2", "gpt2-large", "distilgpt2",
                                 "roberta-base", "roberta-large", "distilroberta-base",
                                 "google/electra-small-discriminator", "google/electra-base-discriminator", "google/electra-large-discriminator",
-                                "EleutherAI/pythia-160m", "EleutherAI/pythia-410m", "EleutherAI/pythia-1b", "EleutherAI/pythia-1.4b"
-                                ]
+                                "EleutherAI/pythia-160m", "EleutherAI/pythia-410m", "EleutherAI/pythia-1b", "EleutherAI/pythia-1.4b",
+                                "meta-llama/Llama-3.2-1B"]
 # possible other models (test):
 # "openai-gpt"
 # "xlm-roberta-base", "xlm-roberta-large",
@@ -29,11 +29,15 @@ SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "dist
 # "xlnet-base-cased", "xlnet-large-cased",
 
 # TODO: move to some config
-LABEL_MATCHES = {'black': 'aa', 'aa': 'black', 'M': 'male', 'male': 'M', 'F': 'female', 'female': 'F',
-                 'homosexual_gay_or_lesbian': 'homosexual', 'homosexual': 'homosexual_gay_or_lesbian',
-                 'psychiatric_or_mental_illness': 'mental_disability_illness', 'mental_disability_illness': 'psychiatric_or_mental_illness',
-                 'european/white': 'white', 'white': 'european/white', 'african/black': 'black', 'black': 'african/black', 'south east asian': 'asian', 'asian': 'south east asian'}
-
+#LABEL_MATCHES = {'black': 'aa', 'aa': 'black', 'M': 'male', 'male': 'M', 'F': 'female', 'female': 'F',
+#                 'homosexual_gay_or_lesbian': 'homosexual', 'homosexual': 'homosexual_gay_or_lesbian',
+#                 'psychiatric_or_mental_illness': 'mental_disability_illness', 'mental_disability_illness': 'psychiatric_or_mental_illness',
+#                 'european/white': 'white', 'white': 'european/white', 'african/black': 'black', 'black': 'african/black', 'south east asian': 'asian', 'asian': 'south east asian',
+#                 'aae': 'black', 'neutral (ae_dialect)': 'white', 'latino': 'hispanic'}
+LABEL_MATCHES = {'M': 'male', 'F': 'female',
+                 'aa': 'black', 'african/black': 'black', 'aae': 'black', 'neutral (ae_dialect)': 'white', 'european/white': 'white', 'south east asian': 'asian', 'latino': 'hispanic',
+                 'homosexual_gay_or_lesbian': 'homosexual',
+                 'psychiatric_or_mental_illness': 'mental_disability_illness'}
 
 def add_contrastive_any_labels(g_test, group_names):
     n_groups = g_test.shape[1]
@@ -82,29 +86,38 @@ def get_features(X, T):
 
 
 def align_labels(y_test, y_pred, pred, label_test, label_pred):
+
     # align predictions and test labels:
     # there might be more predicted groups than test groups
     # the order of groups might be different
     # some data_loader use different labels for the same group
-    if len(label_test) < len(label_pred):
-        # got predictions for more groups than available in test data
-        # reduce pred to match the number of test groups (minding the order of groups!)
-        if len(label_test) == 1 and y_test.shape[1] == 2:
-            y_test = y_test[:, 1]
-        sel_labels = [lbl if lbl in label_pred else LABEL_MATCHES[lbl] for lbl in label_test]
-        ids_pred = [label_pred.index(lbl) for lbl in sel_labels]
-        y_pred = y_pred[:, ids_pred]
-        pred = pred[:, ids_pred]
-        label_pred = sel_labels
-    else:
-        # same groups in pred in test labels; check order and match inconsistent names that refer to the same group
-        sel_labels = [lbl if lbl in label_test else LABEL_MATCHES[lbl] for lbl in label_pred]
-        if y_test.ndim > 1:
-            ids_test = [label_test.index(lbl) for lbl in sel_labels]
-            y_test = y_test[:, ids_test]
-        label_test = sel_labels
+    print("labels before alignment:")
+    print(label_test)
+    print(label_pred)
 
-    return y_test, y_pred, pred, label_test, label_pred
+    # convert non-default labels to allow matching of test/pred labels
+    label_test = [LABEL_MATCHES[lbl] if lbl in LABEL_MATCHES.keys() else lbl for lbl in label_test]
+    label_pred = [LABEL_MATCHES[lbl] if lbl in LABEL_MATCHES.keys() else lbl for lbl in label_pred]
+
+    print("labels converted to default names:")
+    print(label_test)
+    print(label_pred)
+
+    label_shared = [lbl for lbl in label_test if lbl in label_pred]
+    ids_pred = [label_pred.index(lbl) for lbl in label_shared]
+    ids_test = [label_test.index(lbl) for lbl in label_shared]
+    y_pred = y_pred[:, ids_pred]
+    pred = pred[:, ids_pred]
+    y_test = y_test[:, ids_test]
+
+    print("labels after alignment:")
+    print(label_shared)
+    print(label_shared)
+
+    print(y_pred.shape)
+    print(y_test.shape)
+
+    return y_test, y_pred, pred, label_shared, label_shared
 
 
 def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str, pooling: str, batch_size: int,
@@ -160,9 +173,9 @@ def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str
         return dataset
 
 
-def filter_group_labels(all_groups: list, sel_groups: list, group_lbl: np.ndarray):
+def filter_group_labels(all_groups: list, sel_groups: list, group_lbl: np.ndarray, group_weights: np.ndarray = None):
     if sel_groups is None or sel_groups == all_groups:
-        return group_lbl, sel_groups
+        return group_lbl, sel_groups, group_weights
 
     msg = "group_lbl are either singe-label or do not match the number of groups"
     assert type(group_lbl) is np.ndarray and group_lbl.ndim > 1 and group_lbl.shape[1] == len(all_groups), msg
@@ -172,7 +185,7 @@ def filter_group_labels(all_groups: list, sel_groups: list, group_lbl: np.ndarra
     group_lbl = np.squeeze(group_lbl[:, [filter_ids]])
 
     if group_lbl.ndim == 1:
-        group_lbl = group_lbl.reshape(-1,1)
+        group_lbl = group_lbl.reshape(-1, 1)
 
     msg = "group_lbl does not match the expected shape of [%i,%i], got %s instead" % (group_lbl.shape[0],
                                                                                       len(sel_groups), group_lbl.shape)
@@ -182,7 +195,10 @@ def filter_group_labels(all_groups: list, sel_groups: list, group_lbl: np.ndarra
     if sel_groups is not None:
         assert sel_groups == groups, "expected these groups: %s, but after filtering got: %s" % (sel_groups, groups)
 
-    return group_lbl, groups
+    if group_weights is not None:
+        group_weights = group_weights[filter_ids]
+
+    return group_lbl, groups, group_weights
 
 
 """
