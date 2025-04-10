@@ -1,5 +1,10 @@
 {
   "huggingface_models": [
+    "EleutherAI/pythia-160m",
+    "EleutherAI/pythia-410m",
+    "EleutherAI/pythia-1b",
+    "EleutherAI/pythia-1.4b",
+    "meta-llama/Llama-3.2-1B",
     "bert-base-uncased",
     "bert-large-uncased",
     "distilbert-base-uncased",
@@ -14,14 +19,7 @@
     "google/electra-base-generator",
     "google/electra-base-discriminator",
     "albert-base-v2",
-    "albert-large-v2",
-    "EleutherAI/pythia-160m"
-  ],
-  "todo": [
-    "EleutherAI/pythia-410m",
-    "EleutherAI/pythia-1b",
-    "EleutherAI/pythia-1.4b",
-    "meta-llama/Llama-3.2-1B"
+    "albert-large-v2"
   ],
   "openai_models": [
     "text-embedding-3-small",
