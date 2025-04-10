@@ -1,31 +1,3 @@
-gender:
-- dataset: bios-supervised
-  groups:
-  - male
-  - female
-  local_dir: ../../data/bios_huggingface_merge.pkl
-  suffix: null
-- dataset: jigsaw
-  groups:
-  - any
-  - male
-  - female
-  local_dir: ../../data/jigsaw_bias
-  suffix: gender
-- dataset: crows_pairs
-  groups:
-  - any
-  - male
-  - female
-  local_dir: null
-  suffix: gender
-- dataset: stereoset
-  groups:
-    - any
-    - male
-    - female
-  local_dir: null
-  suffix: gender
 race:
 - dataset: twitterAAE
   groups:
@@ -87,14 +59,31 @@ religion:
     - hindu
   local_dir: null
   suffix: religion
-disability:
+gender:
+- dataset: bios-supervised
+  groups:
+  - male
+  - female
+  local_dir: ../../data/bios_huggingface_merge.pkl
+  suffix: null
 - dataset: jigsaw
   groups:
-  - psychiatric_or_mental_illness
+  - any
+  - male
+  - female
   local_dir: ../../data/jigsaw_bias
-  suffix: disability
+  suffix: gender
 - dataset: crows_pairs
   groups:
-  - mental_disability_illness
+  - any
+  - male
+  - female
   local_dir: null
-  suffix: disability
+  suffix: gender
+- dataset: stereoset
+  groups:
+    - any
+    - male
+    - female
+  local_dir: null
+  suffix: gender

@@ -60,7 +60,7 @@ def train_cbm_train_test(emb_train, y_train, g_train, emb_test, y_test, g_test, 
     print("fit CBM with groups ", groups)
 
     n_classes, multi_label = utils.get_number_of_classes(y_test)
-    if multi_label or n_classes == 2:
+    if multi_label:
         print("binary (multi) label: use BCEWithLogitsLoss")
         criterion = torch.nn.BCEWithLogitsLoss
     else:
@@ -140,13 +140,13 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
     dataset = utils.get_dataset_with_embeddings(emb_dir, dataset, model, pooling, batch_size, local_dir)
 
     if len(dataset.splits) == 1:
-        print("single-split dataset - train CAV for each CV split")
+        print("single-split dataset - train CBM for each CV split")
         for fold_id in range(dataset.n_folds):
             data_dict = dataset.get_cv_split(fold_id)
             X_train, emb_train, y_train, g_train, class_weights, group_weights = data_dict['train']
             X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
-            g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
-            g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+            g_train, groups, group_weights = utils.filter_group_labels(dataset.group_names, sel_groups, g_train, group_weights)
+            g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
             checkpoint_file_fold = checkpoint_file + ('_%iof%i' % (fold_id, dataset.n_folds))
             params_file_fold = params_file.replace('.pickle', '_%iof%i.pickle' % (fold_id, dataset.n_folds))
@@ -158,8 +158,8 @@ def train_cbms(dataset, model, pooling, batch_size, emb_dir, cbm_dir, plot_dir, 
         # TODO: what to do with dev split? combine with test split?
         X_train, emb_train, y_train, g_train, class_weights, group_weights = dataset.get_split('train')
         X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
-        g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
-        g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+        g_train, groups, group_weights = utils.filter_group_labels(dataset.group_names, sel_groups, g_train, group_weights)
+        g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
         train_cbm_train_test(emb_train, y_train, g_train, emb_test, y_test, g_test, sel_groups, group_weights,
                              class_weights, params_file, checkpoint_file, lc_savefile)
@@ -207,6 +207,10 @@ def eval_cbm_on_test_split(emb_test, g_test, checkpoint_file, params_file, group
     _, concepts = cbmWrapper.predict(emb_test)
     c_pred = (np.array(concepts) >= 0).astype(int)  # concept scores are logits!
 
+    # remove model from gpu
+    cbm.to('cpu')
+    del cbm
+
     # handle different dimensionality of test and predicted concepts
     if not utils.is1D(c_test) and utils.is1D(c_pred):
         print("convert 1d prediction to onehot")
@@ -236,6 +240,13 @@ def eval_cbm_on_test_split(emb_test, g_test, checkpoint_file, params_file, group
     # compute F1-score and Pearson correlation
     f1 = f1_score(c_test, c_pred, average='macro')
 
+    print(f1)
+    print(concepts_.shape)
+    print(c_test_.shape)
+    print(groups_train_)
+    print(groups_test_)
+    print(dataset_train)
+    print(dataset_test)
     if not utils.is1D(concepts_):  # both > 1D
         corr = scipy.stats.pearsonr(concepts_, np.asarray(c_test_))
     else:  # both 1D
@@ -291,12 +302,13 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         f1s = []
         rs = []
         ps = []
+        fold_missing = False
         for fold_id in range(dataset.n_folds):
             plot_savefile_fold = plot_savefile.replace('.png', '_%iof%i.png' % (fold_id, dataset.n_folds))
 
             data_dict = dataset.get_cv_split(fold_id)
             X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
-            g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
+            g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
 
             for i, cur_file_name in enumerate(file_names):
                 (checkpoint_file_fold, params_file_fold) = cur_file_name
@@ -305,7 +317,8 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
                 if not os.path.isfile(checkpoint_file_fold):
                     print("could not find CBM checkpoint for %s %s %s" % (dataset_train, model, pooling))
                     print(checkpoint_file)
-                    return
+                    fold_missing = True
+                    break
 
                 (cur_f1, cur_corr,
                  groups_train_, groups_test_) = eval_cbm_on_test_split(emb_test, g_test, checkpoint_file_fold,
@@ -316,6 +329,11 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
                 rs.append(cur_corr.statistic)
                 ps.append(cur_corr.pvalue)
 
+            if fold_missing:
+                print("at least one checkpoint of the training data folds is missing, skip %s" % dataset_train)
+                print(file_names)
+                return
+
         f1 = np.mean(f1s)
         # corr might be a list of correlations per group
         r_val = np.mean(rs, axis=0)
@@ -324,20 +342,22 @@ def evaluate_cbms(dataset_train, dataset_test, model, pooling, batch_size, emb_d
             print("after %i folds of crossval got F1 = %.2f +/- %.2f, R = %.2f +/- %.2f, "
                   "p = %.2f +/- %.2f" % (dataset.n_folds, f1, np.std(f1s), r_val, np.std(rs), p_val, np.std(ps)))
     else:
-        if not os.path.isfile(checkpoint_file):
-            print("could not find CBM checkpoint for %s %s %s" % (dataset_train, model, pooling))
-            print(checkpoint_file)
-            return
         # TODO: check later if new datasets use the same split names
         # TODO: what to do with dev split? combine with test split?
         X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
-        g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
+        g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
 
         f1s = []
         rs = []
         ps = []
         for i, cur_file_name in enumerate(file_names):  # might need to iterate through cv splits of training dataset
             (checkpoint_file_fold, params_file_fold) = cur_file_name
+            if not os.path.isfile(checkpoint_file_fold):
+                print("could not find CBM checkpoint for %s %s %s" % (dataset_train, model, pooling))
+                print(checkpoint_file_fold)
+                print("since at least one checkpoint is missing, skip eval for %s %s %s" % (dataset_train, model, pooling))
+                return
+
             plot_savefile_fold = plot_savefile.replace('.png', '_%i.png' % i)
             cur_f1, cur_corr, groups_train_, groups_test_ = eval_cbm_on_test_split(emb_test, g_test,
                                                                                    checkpoint_file_fold,
@@ -388,7 +408,7 @@ def run_cbm_training(config):
         for pool in pooling_choices:
             for setup in training_setups:
                 # these data_loader do not have a classification labels, so a CBM cannot be trained
-                if setup['dataset'] in ['twitterAAE', 'crows_pairs']:
+                if setup['dataset'] in ['twitterAAE']:
                     continue
                 train_cbms(setup['dataset'], model, pool, batch_size, config["embedding_dir"], config["cbm_dir"], plot_dir=config["plot_dir"],
                            local_dir=setup['local_dir'], sel_groups=setup['groups'], file_suffix=setup['suffix'])
@@ -438,7 +458,7 @@ def run_cbm_eval(config):
             for pool in pooling_choices:
                 for train_setup in train_setups:
                     # these data_loader do not have a classification labels, so a CBM cannot be trained
-                    if train_setup['dataset'] in ['twitterAAE', 'crows_pairs']:
+                    if train_setup['dataset'] in ['twitterAAE']:
                         continue
 
                     # check if train dataset relevant for the current attribute
@@ -468,8 +488,7 @@ def run_cbm_eval(config):
                             print("testing %s features on %s" % (train_setup['dataset'], eval_setup['dataset']))
 
                             # run eval
-                            (f1, r_val, p_val, groups_train,
-                             groups_eval) = evaluate_cbms(train_setup['dataset'], eval_setup['dataset'], model, pool,
+                            f1, r_val, p_val, groups_train, groups_eval = evaluate_cbms(train_setup['dataset'], eval_setup['dataset'], model, pool,
                                                           batch_size, config["embedding_dir"], config["cbm_dir"],
                                                           config["plot_dir"], local_dir=eval_setup['local_dir'],
                                                           local_dir_train=train_setup['local_dir'],
@@ -514,7 +533,7 @@ def main(argv):
     with open(config_path, 'r') as f:
         config = json.load(f)
 
-    run_cbm_training(config)
+    #run_cbm_training(config)
     run_cbm_eval(config)
 
 

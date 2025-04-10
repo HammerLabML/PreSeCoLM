@@ -75,13 +75,3 @@
     - hindu
   local_dir: null
   suffix: religion
-- dataset: jigsaw
-  groups:
-  - psychiatric_or_mental_illness
-  local_dir: ../../data/jigsaw_bias
-  suffix: disability
-- dataset: crows_pairs
-  groups:
-  - mental_disability_illness
-  local_dir: null
-  suffix: disability

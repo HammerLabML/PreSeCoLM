@@ -71,8 +71,8 @@ def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=
             data_dict = dataset.get_cv_split(fold_id)
             X_train, emb_train, y_train, g_train, cw, gw = data_dict['train']
             X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
-            g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
-            g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+            g_train, groups, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
+            g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
             file_name_fold = file_name.replace('.pickle', '_%iof%i.pickle' % (fold_id, dataset.n_folds))
             train_cav_train_test(emb_train, g_train, emb_test, g_test, file_name_fold, groups)
@@ -81,8 +81,8 @@ def train_cavs(dataset, model, pooling, batch_size, emb_dir, cav_dir, local_dir=
         # TODO: what to do with dev split? combine with test split?
         X_train, emb_train, y_train, g_train, cw, gw = dataset.get_split('train')
         X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
-        g_train, groups = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
-        g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+        g_train, groups, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
+        g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
         train_cav_train_test(emb_train, g_train, emb_test, g_test, file_name, groups)
 
@@ -141,6 +141,7 @@ def eval_cav_on_test_split(file_name, emb_test, g_test, groups_train, groups_tes
     # align labels
     c_test, c_pred, pred, groups_test, groups_train = utils.align_labels(g_test, g_pred, pred, groups_test,
                                                                          groups_train)
+
 
     # add any- and contrastive labels for further eval
     if add_labels:
@@ -226,7 +227,7 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         for fold_id in range(dataset.n_folds):
             data_dict = dataset.get_cv_split(fold_id)
             X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
-            g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
+            g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
 
             for i, cur_file_name in enumerate(file_names):
                 plot_savefile_fold = plot_savefile.replace('.png', '_%iof%i_%i.png'
@@ -251,7 +252,7 @@ def evaluate_cavs(dataset_train, dataset_test, model, pooling, batch_size, emb_d
         # TODO: check later if new datasets use the same split names
         # TODO: what to do with dev split? combine with test split?
         X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
-        g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
+        g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups_test_, g_test)
 
         f1s = []
         rs = []

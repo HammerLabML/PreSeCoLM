@@ -120,7 +120,10 @@ class BiasSpaceModel():
 
         for attr, subdict in attribute_dict.items():
             assert NEUTRAL_KEY in subdict.keys(), "did not provide a neutral def. set for attribute '%s'" % attr
-            assert len(subdict) > 2, "expected defining sets for at least one group plus neutral def. set"
+            assert len(subdict) >= 2, "expected defining sets for at least one group plus neutral def. set"
+
+            if len(subdict) == 2:
+                self.lbl.append('neutral (%s)' % attr)
 
             # if multiple attributes are available, combine group and attr label
             attr_str = attr if len(attribute_dict) > 1 else None
@@ -170,7 +173,7 @@ def evaluate_bias_space(defining_term_dict, dataset_test, model, pooling, batch_
         eval_split = dataset.splits[0]
 
     X_test, emb_test, y_test, g_test, _, _ = dataset.get_split(eval_split)
-    g_test, _ = utils.filter_group_labels(dataset.group_names, sel_groups_eval_, g_test)
+    g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups_eval_, g_test)
 
     # compute concepts
     bias_space = BiasSpaceModel()
