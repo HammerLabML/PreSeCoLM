@@ -13,7 +13,6 @@ def get_dataset(dataset_name, local_dir=None):
         else:
             dataset = JigsawBias(local_dir=local_dir, option='single-class')
     elif dataset_name == "bios-supervised":
-        local_dir = '../../data/bios_huggingface_merge.pkl'
         dataset = BiosDataset(local_dir=local_dir, option='supervised')
     elif dataset_name == "bios-unsupervised":
         dataset = BiosDataset(local_dir=local_dir, option='unsupervised')

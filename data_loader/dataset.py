@@ -166,7 +166,8 @@ class CustomDataset:
     def set_preprocessed_data(self, data_prep: dict):
         for split in self.splits:
             assert split in data_prep.keys()
-            assert len(self.data[split]) == len(data_prep[split])
+            assert len(self.data[split]) == len(data_prep[split]), ("got %i samples of preprocessed data, which doesnt "
+                                                                    "match the number of texts: %i ")
             self.data_preprocessed[split] = data_prep[split]
         #print("preprocessed data has type: ", type(self.data_preprocessed[self.splits[0]]))
         self.set_cv_fold_preprocessed_data()

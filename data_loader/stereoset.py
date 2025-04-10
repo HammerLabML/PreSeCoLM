@@ -4,20 +4,35 @@ from .helper import simplify_text
 import datasets
 import numpy as np
 
-terms_race = {'european/white': ['ukrainian', 'norway', 'spain', 'italy', 'britain', 'norweigan', 'crimean', 'russian'],
-              'african/black': ['sierra leon', 'eriteria', 'somalia', 'african', 'eritrean', 'sierra leone', 'somalia', 'morocco', 'ethiopian', 'ethiopia', 'ghanaian', 'cameroon', 'cape verde'],
+terms_race = {'european/white': ['ukrainian', 'norway', 'spain', 'italy', 'britain', 'norweigan', 'crimean', 'russian', 'white people', 'white'],
+              'african/black': ['sierra leon', 'eriteria', 'somalia', 'african', 'eritrean', 'sierra leone', 'somalia', 'morocco', 'ethiopian', 'ethiopia', 'ghanaian', 'cameroon', 'cape verde', 'black people', 'black'],
               'hispanic': ['ecuador', 'spain', 'columbian', 'hispanic'],
-              'south east asian': ['indian', 'japanese', 'vietnam', 'bengali', 'bangladesh'],
+              'south east asian': ['indian', 'japanese', 'vietnam', 'bengali', 'bangladesh', 'korean', 'asian', 'indonesia', 'asia'],
               'middle east': ['lebanon', 'iranian', 'persian', 'iraq', 'yemen', 'syrian', 'arab', 'saudi arabia', 'jordan', 'syria', 'saudi arabian', 'afghanistan', 'afghanistansuch']
               }
 
-terms_gender = {'male': ['he', 'his', 'himself', 'man', 'men', 'father', 'male', 'schoolboy', 'gentlemen', 'brother', 'daddy', 'father', 'grandfather', 'gentlement'],
-                'female': ['she', 'her', 'herself', 'woman', 'women', 'mother', 'female', 'schoolgirl', 'sister', 'mommy', 'grandmother']
+terms_gender = {'male': ['he', 'his', 'him', 'himself',
+                         'man', 'men', 'male',
+                         'father', 'dad', 'daddy',
+                         'schoolboy', 'boy' 
+                         'gentlemen',  'gentlement',
+                         'brother', 'nephew', 'son',
+                         'grandfathe', 'grandfather', 'grandpa', 'uncle',
+                         'boyfriend', 'husband'],
+                'female': ['she', 'her', 'hers', 'herself',
+                           'woman', 'women', 'female',
+                           'mother', 'mom', 'mommy',
+                           'schoolgirl', 'girl',
+                           'lady',
+                           'sister', 'niece', 'daughter',
+                           'grandmother', 'grandma', 'aunt',
+                           'girlfriend', 'wife']
                 }
 
-terms_religion = {'christian': ['bible', 'catholics'],
+terms_religion = {'christian': ['bible', 'catholics', 'christian', 'church'],
                   'muslim': ['muslim', 'mosque', 'islam'],
-                  'hindu': ['brahmin']
+                  'hindu': ['brahmin', 'hindu'],
+                  'jewish': ['jewish', 'jew', 'synagogue']
                   }
 
 n_groups = 0
@@ -80,11 +95,20 @@ class StereoSet(CustomDataset):
                     sent_val.append(context + '. ' + sent)
                 else:
                     sent_val.append(sent)
+                # set label
                 y_val[sent_idx + j] = labels[j]
 
-            # set groups (each sample -> 3 sentences/labels)
-            for group in groups:
-                g_val[sent_idx:sent_idx + 2, group2idx[group]] = 1
+                # set shared group label
+                for group in groups:
+                    g_val[sent_idx + j, group2idx[group]] = 1
+
+                # check for group label unique to this sentence version
+                sent_ = ' ' + sent + ' '
+                for group_dict in [terms_race, terms_gender, terms_religion]:
+                    for group, terms in group_dict.items():
+                        for term in terms:
+                            if (' %s ' % term) in sent_ or (' %ss ' % term) in sent_:
+                                g_val[sent_idx + j, group2idx[group]] = 1
 
         return sent_val, y_val, g_val, class_names
 
