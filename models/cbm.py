@@ -35,6 +35,53 @@ class CBM(torch.nn.Module):
         return output
 
 
+class CBMNonLinear(torch.nn.Module):
+    # the model transforms the input activations through two concept layers:
+    # C1 the specified concepts, for which a loss is computed based on concept labels
+    # C2 the unspecified concepts, that the model optimized only based on the clf loss
+    # both outputs are concatenated and passed through the clf head
+
+    def __init__(self, input_size, output_size, n_learned_concepts, n_other_concepts, hidden_size=None):
+        super().__init__()
+        self.XtoC1 = torch.nn.Linear(input_size, n_learned_concepts)
+        self.XtoC2 = torch.nn.Linear(input_size, n_other_concepts)
+        self.activation = torch.nn.ReLU()
+        self.C1toC1b = torch.nn.Linear(n_other_concepts, n_other_concepts)
+        self.C2toC2b = torch.nn.Linear(n_other_concepts, n_other_concepts)
+
+        if torch.cuda.is_available():
+            self.XtoC1 = self.XtoC1.to('cuda')
+            self.XtoC2 = self.XtoC2.to('cuda')
+            self.activation = self.XtoC2.to('cuda')
+            self.C1toC1b = self.XtoC2.to('cuda')
+            self.C2toC2b = self.XtoC2.to('cuda')
+
+        n_concepts = n_learned_concepts + n_other_concepts
+        if hidden_size is None:
+            self.clf = LinearClassifier(n_concepts, output_size)
+        else:
+            self.clf = Classifier(n_concepts, output_size, hidden_size)
+
+    def forward(self, x):
+        # supervised concepts
+        c1 = self.XtoC1(x)
+        c1 = self.activation(c1)
+        c1 = self.C1toC1b(c1)
+
+        # other concepts
+        c2 = self.XtoC2(x)
+        c2 = self.activation(c2)
+        c2 = self.C2toC2b(c2)
+
+        # join concepts
+        c = torch.cat((c1, c2), dim=1)
+
+        # classify
+        out = self.clf.forward(c)
+        output = [out, c1]
+        return output
+
+
 class CBMWrapper():
     
     def __init__(self, model: torch.nn.Module, batch_size: int, class_weights=None, criterion=torch.nn.CrossEntropyLoss,

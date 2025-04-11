@@ -1,0 +1,382 @@
+gender:
+  defining_terms:
+    gender:
+      neutral:
+      - a person
+      - people
+      - the person is
+      - they are
+      - they are
+      - a person
+      - those people
+      - parent
+      - their child
+      - grandparent
+      - sibling
+      - a child
+      male:
+      - a masculine person
+      - masculine people
+      - the person is male
+      - he is male
+      - they are male
+      - a man
+      - those men
+      - father
+      - their son
+      - grandfather
+      - brother
+      - a boy
+      female:
+      - a feminine person
+      - feminine people
+      - the person is female
+      - she is female
+      - they are female
+      - a woman
+      - those women
+      - mother
+      - their daughter
+      - grandmother
+      - sister
+      - a girl
+  eval:
+  - dataset: bios-supervised
+    groups:
+    - male
+    - female
+    groups_pie:
+    - male
+    - female
+    local_dir: ../datasets/bios_huggingface_merge.pkl
+    suffix: null
+  - dataset: jigsaw
+    groups:
+    - any
+    - male
+    - female
+    groups_pie:
+    - any
+    - male
+    - female
+    local_dir: ../jigsaw_bias
+    suffix: gender
+  - dataset: crows_pairs
+    groups:
+    - any
+    - male
+    - female
+    groups_pie:
+    - any
+    - male
+    - female
+    local_dir: null
+    suffix: gender
+  - dataset: stereoset
+    groups:
+      - any
+      - male
+      - female
+    groups_pie:
+      - any
+      - male
+      - female
+    local_dir: null
+    suffix: gender
+race:
+  defining_terms:
+    ethn_us:
+      neutral:
+      - people
+      - people
+      - american
+      - american
+      - a person
+      - someone
+      - the person is
+      white:
+      - white people
+      - whites
+      - white american
+      - caucasian american
+      - a caucasian
+      - some caucasian
+      - the person is white
+      black:
+      - black people
+      - blacks
+      - african american
+      - afro american
+      - an african
+      - some african
+      - the person is black
+      asian:
+      - asian people
+      - asians
+      - asian american
+      - asian american
+      - an asian
+      - some asian
+      - the person is asian
+      hispanic:
+      - hispanic people
+      - hispanics
+      - latin-american
+      - hispano-american
+      - a latino
+      - some latino
+      - the person is hispanic
+      middle eastern:
+      - middle eastern people
+      - middle easterners
+      - middle eastern american
+      - middle eastern american
+      - a middle easterner
+      - some middle easterner
+      - the person is middle eastern
+  eval:
+  - dataset: twitterAAE
+    groups:
+    - aa
+    - white
+    groups_pie:
+    - black
+    - white
+    local_dir: null
+    suffix: null
+  - dataset: jigsaw
+    groups:
+    - any
+    - white
+    - black
+    - asian
+    - latino
+    groups_pie:
+    - any
+    - white
+    - black
+    - asian
+    - hispanic
+    local_dir: ../../data/jigsaw_bias
+    suffix: race
+  - dataset: crows_pairs
+    groups:
+    - any
+    - white
+    - black
+    - asian
+    groups_pie:
+    - any
+    - white
+    - black
+    - asian
+    local_dir: null
+    suffix: race
+  - dataset: stereoset
+    groups:
+    - any
+    - european/white
+    - african/black
+    - hispanic
+    - south east asian
+    - middle east
+    groups_pie:
+    - any
+    - white
+    - black
+    - hispanic
+    - asian
+    - middle eastern
+    local_dir: null
+    suffix: gender
+religion:
+  defining_terms:
+    religion:
+      neutral:
+      - people
+      - person
+      - people
+      - building
+      - building
+      - book
+      - book
+      - a person
+      - holiday
+      - holiday
+      - people
+      - people
+      christian:
+      - christian people
+      - christian
+      - christians
+      - church
+      - chapel
+      - bible
+      - bible
+      - a christian
+      - christmas
+      - easter
+      - catholic people
+      - lutheran people
+      muslim:
+      - muslim people
+      - muslim
+      - muslims
+      - mosque
+      - masjid
+      - quran
+      - quran
+      - a muslim
+      - ramadan
+      - eid al-adha
+      - muslim people
+      - muslim people
+      jewish:
+      - jewish people
+      - jew
+      - jews
+      - synagogue
+      - synagog
+      - tanakh
+      - hebrew bible
+      - a jew
+      - hanukkah
+      - tisha bav
+      - jewish people
+      - jewish people
+      buddhist:
+      - buddhist people
+      - buddhist
+      - buddhists
+      - vihara
+      - buddhist temple
+      - buddhist canons
+      - buddhist canons
+      - a buddhist
+      - vesak
+      - parinirvana day
+      - buddhist people
+      - buddhist people
+      hindu:
+      - hindu people
+      - hindu
+      - hindus
+      - mandir
+      - hindu temple
+      - vedas
+      - upanishads
+      - a hindu
+      - diwali
+      - makar sankranti
+      - hindu people
+      - hindu people
+      atheist:
+      - atheist people
+      - atheist
+      - atheists
+      - secular building
+      - secular building
+      - secular book
+      - secular book
+      - an atheist
+      - secular holiday
+      - national holiday
+      - atheist people
+      - non-religious people
+  eval:
+  - dataset: jigsaw
+    groups:
+    - any
+    - christian
+    - muslim
+    - jewish
+    - buddhist
+    - hindu
+    groups_pie:
+    - any
+    - christian
+    - muslim
+    - jewish
+    - buddhist
+    - hindu
+    local_dir: ../jigsaw_bias
+    suffix: religion
+  - dataset: crows_pairs
+    groups:
+    - any
+    - christian
+    - muslim
+    - jewish
+    groups_pie:
+    - any
+    - christian
+    - muslim
+    - jewish
+    local_dir: null
+    suffix: religion
+  - dataset: stereoset
+    groups:
+      - any
+      - christian
+      - muslim
+      - hindu
+    groups_pie:
+      - any
+      - christian
+      - muslim
+      - hindu
+    local_dir: null
+    suffix: religion
+dialect:
+  defining_terms:
+    ae_dialect:
+      neutral:
+      - she is always working
+      - he doesn't have any
+      - i am about to go to the store
+      - she is my sister
+      - they were at the party
+      - we have finished our homework
+      - you are always joking around
+      - i haven't seen him today
+      - it doesn't matter
+      - she got her hair done
+      - she has known him for a long time
+      - that's my brother's car
+      - yesterday, he walked to the store
+      - i don't know anything
+      - he will be going to the store tomorrow
+      - he told me the story
+      - are you all coming to the party
+      - she runs fast
+      - there are a lot of people here
+      aae:
+      - she be workin' all the time
+      - he ain't got none
+      - i'm finna go to the store
+      - she my sister
+      - they was at the party
+      - we done finished our homework
+      - you stay playin' too much
+      - i ain't seen him today
+      - it don't matter
+      - she got her hair did
+      - she been knowing him
+      - that my brother car
+      - yesterday, he walk to the store
+      - i don't know nothing
+      - he be going to the store tomorrow
+      - he tol' me the story
+      - y'all coming to the party
+      - she run fast
+      - it's a lot of people here
+  eval:
+  - dataset: twitterAAE
+    groups:
+    - aa
+    - white
+    groups_pie:
+    - aae
+    - neutral (ae_dialect)
+    local_dir: null
+    suffix: ''
