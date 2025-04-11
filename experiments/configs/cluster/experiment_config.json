@@ -29,7 +29,7 @@
     "mean",
     "cls"
   ],
-  "embedding_dir": "../../artifacts/embeddings/",
+  "embedding_dir": "../embeddings/",
   "cav_train_config": "experiments/configs/cluster/config_train_cav_v1.yaml",
   "cbm_train_config": "experiments/configs/cluster/config_train_cbm_v1.yaml",
   "eval_config": "experiments/configs/cluster/config_eval_v1.yaml",
