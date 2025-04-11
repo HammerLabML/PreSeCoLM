@@ -30,16 +30,16 @@
     "cls"
   ],
   "embedding_dir": "../../artifacts/embeddings/",
-  "cav_train_config": "experiments/configs/new/config_train_cav_v1.yaml",
-  "cbm_train_config": "experiments/configs/new/config_train_cbm_v1.yaml",
-  "eval_config": "experiments/configs/new/config_eval_v1.yaml",
-  "bias_space_eval_config": "experiments/configs/new/config_bias_space_v1.yaml",
+  "cav_train_config": "experiments/configs/cluster/config_train_cav_v1.yaml",
+  "cbm_train_config": "experiments/configs/cluster/config_train_cbm_v1.yaml",
+  "eval_config": "experiments/configs/cluster/config_eval_v1.yaml",
+  "bias_space_eval_config": "experiments/configs/cluster/config_bias_space_v1.yaml",
   "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
-  "results_dir": "experiments/results/new/",
+  "results_dir": "experiments/results/cluster/",
   "cbm_results_file": "cbm_feature_eval.csv",
   "bias_space_results_file": "bias_space_feature_eval.csv",
   "cav_results_file": "cav_feature_eval.csv",
   "cav_dir": "../../artifacts/cavs/",
   "cbm_dir": "../../artifacts/cbmodels/",
-  "plot_dir": "experiments/plots/new/"
+  "plot_dir": "experiments/plots/cluster/"
 }
