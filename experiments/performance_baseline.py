@@ -58,7 +58,7 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
         if clf_class == models.MLP3Layer:
             # got 2 hidden layers
             clf_params['hidden_size1'] = int(n_features * clf_params['hidden_size_factor'])
-            clf_params['hidden_size2'] = int(n_features * n_features * clf_params['hidden_size_factor'])
+            clf_params['hidden_size2'] = int(clf_params['hidden_size1'] * clf_params['hidden_size_factor'])
         else:
             clf_params['hidden_size'] = int(n_features * clf_params['hidden_size_factor'])
         clf_params.pop('hidden_size_factor', None)
