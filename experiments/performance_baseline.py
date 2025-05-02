@@ -69,9 +69,10 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     pred = wrapper.predict(emb_test)
 
     if multi_label:
-        y_pred = (pred > 0).astype('int')
+        y_pred = (pred > 0.5).astype('int')
     else:
         y_pred = np.argmax(pred, axis=1)
+
     f1 = f1_score(y_test, y_pred, average='macro')
     prec = precision_score(y_test, y_pred, average='macro')
     rec = recall_score(y_test, y_pred, average='macro')
@@ -135,6 +136,7 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
     choices.
     """
     dataset = utils.get_dataset_with_embeddings(emb_dir, dataset_name, model_name, pooling, batch_size, local_dir)
+    print("run experiment for dataset %s, multi_label=%i" % (dataset_name, dataset.multi_label))
 
     # we apply CV for (small) datasets that do not provide a train-test split
     use_cv = (len(dataset.splits) == 1)
