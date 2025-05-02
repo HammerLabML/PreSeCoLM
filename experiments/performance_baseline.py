@@ -225,7 +225,7 @@ def run(config):
                    "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
 
     # read existing results or create new dataframe
-    results_path = config['results_dir'] + config['cav_results_file']
+    results_path = config['results_dir'] + 'baseline_results.csv'
     if os.path.isfile(results_path):
         results = pd.read_csv(results_path)
     else:
@@ -271,11 +271,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hc:", ["config="])
     except getopt.GetoptError:
-        print('cav_train_eval.py -c <config>')
+        print('performance_baseline.py -c <config>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('cav_train_eval.py -c <config>')
+            print('performance_baseline.py -c <config>')
             sys.exit()
         elif opt in ("-c", "--config"):
             config_path = arg
