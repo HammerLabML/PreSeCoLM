@@ -33,9 +33,10 @@
   "results_dir": "experiments/results/performance/",
   "pred_dir": "../../artifacts/pie_baseline_predictions/",
   "plot_dir": "experiments/plots/performance/",
+  "max_epochs": 50,
   "datasets": [
     {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
-    {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"}
+    {"name": "crows_pairs", "local_dir": null}
   ],
   "classifier": {
     "linear": {

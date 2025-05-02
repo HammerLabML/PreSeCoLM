@@ -456,6 +456,7 @@ def run_cbm_eval(config):
                 pooling_choices = ['']
 
             for pool in pooling_choices:
+                did_something = False
                 for train_setup in train_setups:
                     # these data_loader do not have a classification labels, so a CBM cannot be trained
                     if train_setup['dataset'] in ['twitterAAE']:
@@ -486,7 +487,7 @@ def run_cbm_eval(config):
                         if results_cbm.loc[result_filter].empty:
                             # this combination of train and eval setup has not been evaluated yet
                             print("testing %s features on %s" % (train_setup['dataset'], eval_setup['dataset']))
-
+                            did_something = True
                             # run eval
                             f1, r_val, p_val, groups_train, groups_eval = evaluate_cbms(train_setup['dataset'], eval_setup['dataset'], model, pool,
                                                           batch_size, config["embedding_dir"], config["cbm_dir"],
@@ -512,7 +513,8 @@ def run_cbm_eval(config):
                                                                                group, f1, r_val[i], p_val[i]]
 
                         results_cbm.to_csv(results_cbm_path, index=False)
-
+                if did_something:
+                    exit(0)
 
 def main(argv):
     config_path = ''

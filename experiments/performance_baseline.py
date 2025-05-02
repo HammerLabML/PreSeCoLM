@@ -63,6 +63,10 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
             clf_params['hidden_size'] = int(n_features * clf_params['hidden_size_factor'])
         clf_params.pop('hidden_size_factor', None)
 
+    if not multi_label and y_train.ndim > 1:
+        y_train = np.squeeze(y_train)
+        y_val = np.squeeze(y_val)
+
     clf = clf_class(**clf_params)
     wrapper = models.ClfWrapper(clf, **cur_wrapper_params, class_weights=class_weights)
     epochs = wrapper.fit_early_stopping(emb_train, y_train, emb_val, y_val, max_epochs=epochs, delta=0.001, patience=10)
