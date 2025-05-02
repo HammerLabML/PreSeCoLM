@@ -178,12 +178,19 @@ class ClfWrapper:
                     batch_x = batch[0].to('cuda')
                     batch_y = batch[1].to('cuda')
 
-                batch_pred = self.model.forward(batch_x)
+                def closure(backwards=False):
+                    batch_pred = self.model.forward(batch_x)
+                    loss = self.criterion(batch_pred, batch_y)
+                    if backwards:
+                        loss.backward()
 
-                loss = self.criterion(batch_pred, batch_y)
-                loss.backward()
+                    batch_pred.to('cpu')
+                    del batch_pred
 
-                self.optimizer.step()
+                    return loss
+
+                loss = self.optimizer.step(closure=closure)
+
                 if verbose:
                     loop.set_description(f'Epoch {epoch}')
                     loop.set_postfix(loss=loss.item())
