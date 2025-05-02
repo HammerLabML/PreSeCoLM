@@ -151,10 +151,10 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                                               clf_param_dict['wrapper']['optimizer']]
     if dataset.multi_label:
         clf_parameters['wrapper']['criterion'] = [criterion_lookup[loss] for loss in
-                                                  clf_param_dict['wrapper']['criterion']['multi_label']]
+                                                  clf_param_dict['wrapper']['criterion']['multi-label']]
     else:
         clf_parameters['wrapper']['criterion'] = [criterion_lookup[loss] for loss in
-                                                  clf_param_dict['wrapper']['criterion']['single_label']]
+                                                  clf_param_dict['wrapper']['criterion']['single-label']]
 
     print("clf parameters:")
     print(clf_parameters)
