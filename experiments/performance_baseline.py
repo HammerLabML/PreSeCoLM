@@ -81,7 +81,7 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
 
 
 def eval_cv(dataset: data_loader.CustomDataset, clf_class: torch.nn.Module, cur_clf_params: dict,
-            cur_wrapper_params: dict, epochs: int) -> (float, float, float):
+            cur_wrapper_params: dict, max_epochs: int) -> (float, float, float):
     f1s = []
     precisions = []
     recalls = []
@@ -98,7 +98,7 @@ def eval_cv(dataset: data_loader.CustomDataset, clf_class: torch.nn.Module, cur_
 
         cur_f1, cur_prec, cur_rec, predictions, ep = train_eval_one_split(emb_train, y_train, emb_val, y_val, emb_test,
                                                                           y_test, clf_class, cur_clf_params,
-                                                                          cur_wrapper_params, cw, epochs,
+                                                                          cur_wrapper_params, cw, max_epochs,
                                                                           dataset.multi_label)
         f1s.append(cur_f1)
         precisions.append(cur_prec)
