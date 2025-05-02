@@ -142,10 +142,11 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
     # create list with classifier/ parameter configurations
     # add input and output size (matching the embedding size to clf parameters)
     clf_parameters = copy.deepcopy(clf_param_dict)
-    clf_parameters['linear']['input_size'] = emb_size
-    clf_parameters['linear']['output_size'] = dataset.n_classes
-    clf_parameters['non-linear']['input_size'] = emb_size
-    clf_parameters['non-linear']['output_size'] = dataset.n_classes
+    for key in clf_param_dict:
+        if key != 'wrapper':
+            print("set input and output dim for clf: " + key)
+            clf_parameters[key]['input_size'] = emb_size
+            clf_parameters[key]['output_size'] = dataset.n_classes
     clf_parameters['wrapper']['optimizer'] = [optimizer_lookup[optim] for optim in
                                               clf_param_dict['wrapper']['optimizer']]
     if dataset.multi_label:
