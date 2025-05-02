@@ -1,6 +1,6 @@
 from tqdm import tqdm
 import numpy as np
-from .classifier import Classifier, LinearClassifier
+from .classifier import MLP2Layer, LinearClassifier
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
@@ -60,7 +60,7 @@ class CBMNonLinear(torch.nn.Module):
         if hidden_size is None:
             self.clf = LinearClassifier(n_concepts, output_size)
         else:
-            self.clf = Classifier(n_concepts, output_size, hidden_size)
+            self.clf = MLP2Layer(n_concepts, output_size, hidden_size)
 
     def forward(self, x):
         # supervised concepts
