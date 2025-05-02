@@ -105,7 +105,7 @@ class ClfWrapper:
         self.model = model
         self.batch_size = batch_size
         self.class_weights = class_weights
-        if class_weights is not None and criterion == torch.nn.BCEWithLogitsLoss:
+        if class_weights is not None:
             print("use class weights")
             class_weights = torch.tensor(class_weights)
             if torch.cuda.is_available():
