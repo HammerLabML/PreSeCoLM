@@ -52,6 +52,12 @@ class MLP2Layer(torch.nn.Module):
         x = self.sigmoid(x)
         return x
 
+    def to_cpu(self):
+        self.linear1 = self.linear1.to('cpu')
+        self.activation = self.activation.to('cpu')
+        self.linear2 = self.linear2.to('cpu')
+        self.sigmoid = self.sigmoid.to('cpu')
+
 
 class MLP3Layer(torch.nn.Module):
     def __init__(self, input_size: int, output_size: int, hidden_size1: int, hidden_size2: int):
@@ -81,6 +87,14 @@ class MLP3Layer(torch.nn.Module):
         x = self.sigmoid(x)
         return x
 
+    def to_cpu(self):
+        self.linear1 = self.linear1.to('cpu')
+        self.activation1 = self.activation1.to('cpu')
+        self.linear2 = self.linear2.to('cpu')
+        self.activation2 = self.activation2.to('cpu')
+        self.linear3 = self.linear3.to('cpu')
+        self.sigmoid = self.sigmoid.to('cpu')
+
 
 class LinearClassifier(torch.nn.Module):
     def __init__(self, input_size: int, output_size: int):
@@ -97,6 +111,10 @@ class LinearClassifier(torch.nn.Module):
         x = self.linear1(x)
         x = self.sigmoid(x)
         return x
+
+    def to_cpu(self):
+        self.linear1 = self.linear1.to('cpu')
+        self.sigmoid = self.sigmoid.to('cpu')
 
 
 class ClfWrapper:

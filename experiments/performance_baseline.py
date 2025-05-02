@@ -82,6 +82,9 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     rec = recall_score(y_test, y_pred, average='macro')
     print("F1 score: %.2f, Precision: %.2f, Recall: %.2f" % (f1, prec, rec))
 
+    clf.to_cpu()
+    del clf
+
     return f1, prec, rec, pred, epochs
 
 
