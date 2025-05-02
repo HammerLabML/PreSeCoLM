@@ -198,11 +198,9 @@ class ClfWrapper:
                 loss = loss.detach().item()
 
                 if torch.cuda.is_available():
-                    batch_pred.to('cpu')
                     batch_x = batch_x.to('cpu')
                     batch_y = batch_y.to('cpu')
 
-                del batch_pred
                 del batch_x
                 del batch_y
         torch.cuda.empty_cache()
