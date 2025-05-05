@@ -15,11 +15,15 @@ SUPPORTED_OPENAI_MODELS = ["text-embedding-3-small", "text-embedding-3-large"]
 SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "distilbert-base-uncased",
                                 "google/electra-small-generator", "google/electra-base-generator", "google/electra-large-generator",
                                 "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2",
-                                "gpt2", "gpt2-large", "distilgpt2",
+                                "microsoft/deberta-v3-small", "microsoft/deberta-v3-base", "microsoft/deberta-v3-large",
+                                "gpt2", "gpt2-large", "distilgpt2", "gpt2-medium", "openai-gpt",
                                 "roberta-base", "roberta-large", "distilroberta-base",
                                 "google/electra-small-discriminator", "google/electra-base-discriminator", "google/electra-large-discriminator",
                                 "EleutherAI/pythia-160m", "EleutherAI/pythia-410m", "EleutherAI/pythia-1b", "EleutherAI/pythia-1.4b",
-                                "meta-llama/Llama-3.2-1B"]
+                                "meta-llama/Llama-3.2-1B", "meta-llama/Llama-3.2-1B-Instruct",
+                                "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", "deepseek-ai/deepseek-llm-7b-base",
+                                "facebook/bart-base", "facebook/bart-large", "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b",
+                                "google-t5/t5-small", "google-t5/t5-base", "google/ul2", "google/flan-t5-base", "google/flan-ul2"]
 # possible other models (test):
 # "openai-gpt"
 # "xlm-roberta-base", "xlm-roberta-large",
