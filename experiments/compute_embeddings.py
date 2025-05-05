@@ -256,10 +256,6 @@ def run(config):
     if not os.path.isdir(config['results_dir']):
         os.makedirs(config['results_dir'])
 
-    # config with training setups (data_loader, selected groups...)
-    with open(config["cav_train_config"], 'r') as stream:
-        training_setups = yaml.safe_load(stream)
-
     # language models
     openai_models = config["openai_models"]
     huggingface_models = config["huggingface_models"]
@@ -279,10 +275,10 @@ def run(config):
         if model in openai_models:
             pooling_choices = ['']
         for pool in pooling_choices:
-            for setup in training_setups:
-                print("dataset: %s" % setup['dataset'])
-                dataset = utils.get_dataset_with_embeddings(config["embedding_dir"], setup['dataset'], model, pool,
-                                                            batch_size, local_dir=setup['local_dir'])
+            for dataset in config['datasets']:
+                print("dataset: %s" % dataset['name'])
+                dataset = utils.get_dataset_with_embeddings(config["embedding_dir"], dataset['name'], model, pool,
+                                                            batch_size, local_dir=dataset['local_dir'])
 
 
 def main(argv):
