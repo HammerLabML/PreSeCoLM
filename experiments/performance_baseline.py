@@ -208,6 +208,7 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                     prec = 0
                     rec = 0
                     ep = 0
+                    file_name = 'na'
 
                 hidden_size = -1
                 hidden_size2 = -1
