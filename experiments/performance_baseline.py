@@ -249,10 +249,16 @@ def run(config):
     # evaluate baseline classifier performance on different LMs, pooling choices, datasets
     for model in model_names:
         # load model once to get the embedding dim, but don't block the vram
-        lm = BertHuggingface(2, model_name=model, batch_size=1)
-        lm_emb_size = lm.model.config.hidden_size
-        lm.model = lm.model.to('cpu')
-        del lm
+        if model in huggingface_models:
+            lm = BertHuggingface(2, model_name=model, batch_size=1)
+            lm_emb_size = lm.model.config.hidden_size
+            lm.model = lm.model.to('cpu')
+            del lm
+        else: # openai model
+            if model == 'text-embedding-3-small':
+                lm_emb_size = 1536
+            elif model == 'text-embedding-3-large':
+                lm_emb_size = 3072
 
         # set batch size and pooling choices
         pooling_choices = config["pooling"]
