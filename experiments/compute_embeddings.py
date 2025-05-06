@@ -256,10 +256,6 @@ def run(config):
     if not os.path.isdir(config['results_dir']):
         os.makedirs(config['results_dir'])
 
-    # config with evaluation setups (data_loader, protected attributes and groups...)
-    with open(config['bias_space_eval_config'], 'r') as stream:
-        eval_setups_by_attr = yaml.safe_load(stream)
-
     # language models
     openai_models = config["openai_models"]
     huggingface_models = config["huggingface_models"]
@@ -269,33 +265,20 @@ def run(config):
     with open(config["batch_size_lookup"], 'r') as f:
         batch_size_lookup = json.load(f)
 
-        # config with training setups (data_loader, selected groups...)
-        with open(config["cav_train_config"], 'r') as stream:
-            training_setups = yaml.safe_load(stream)
-
-        # language models
-        openai_models = config["openai_models"]
-        huggingface_models = config["huggingface_models"]
-        models = huggingface_models + openai_models
-
-        # dictionary with batch sizes for huggingface models
-        with open(config["batch_size_lookup"], 'r') as f:
-            batch_size_lookup = json.load(f)
-
-        # train the CAV models for any combination of LM, pooling and dataset
-        for model in models:
-            print("at model %s" % model)
-            pooling_choices = config["pooling"]
-            batch_size = 1
-            if model in batch_size_lookup.keys():
-                batch_size = batch_size_lookup[model]
-            if model in openai_models:
-                pooling_choices = ['']
-            for pool in pooling_choices:
-                for setup in training_setups:
-                    print("dataset: %s" % setup['dataset'])
-                    dataset = utils.get_dataset_with_embeddings(config["embedding_dir"], setup['dataset'], model, pool,
-                                                                batch_size, local_dir=setup['local_dir'])
+    # train the CAV models for any combination of LM, pooling and dataset
+    for model in models:
+        print("at model %s" % model)
+        pooling_choices = config["pooling"]
+        batch_size = 1
+        if model in batch_size_lookup.keys():
+            batch_size = batch_size_lookup[model]
+        if model in openai_models:
+            pooling_choices = ['']
+        for pool in pooling_choices:
+            for dataset in config['datasets']:
+                print("dataset: %s" % dataset['name'])
+                dataset = utils.get_dataset_with_embeddings(config["embedding_dir"], dataset['name'], model, pool,
+                                                            batch_size, local_dir=dataset['local_dir'])
 
 
 def main(argv):

@@ -3,6 +3,7 @@ from .bios import BiosDataset
 from .crowspairs import CrowSPairs
 from .jigsaw import JigsawBias
 from .twitter_aae import TwitterAAE
+from .sbic import SBICDataset
 
 
 def get_dataset(dataset_name, local_dir=None):
@@ -22,7 +23,9 @@ def get_dataset(dataset_name, local_dir=None):
         dataset = CrowSPairs()
     elif dataset_name == 'stereoset':
         dataset = StereoSet(option='both')
-    # TODO SBIC, Implicit Hate
+    elif dataset_name == 'sbic':
+        dataset = SBICDataset(local_dir=local_dir)
+    # TODO Implicit Hate
     else:
         print("dataset %s not supported yet" % dataset_name)
         return None
