@@ -69,6 +69,7 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
 
     clf = clf_class(**clf_params)
     wrapper = models.ClfWrapper(clf, **cur_wrapper_params, class_weights=class_weights)
+
     epochs = wrapper.fit_early_stopping(emb_train, y_train, emb_val, y_val, max_epochs=epochs, delta=0.001, patience=10)
     pred = wrapper.predict(emb_test)
 
@@ -186,20 +187,27 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
             for wrapper_params in clf_parameter_sets['wrapper']:
-                if use_cv:
-                    f1, prec, rec, predictions, ep = eval_cv(dataset, clf_head_lookup[clf], clf_params, wrapper_params,
-                                                             max_epochs)
-                else:
-                    f1, prec, rec, predictions, ep = train_eval_one_split(emb_train, y_train, emb_dev, y_dev, emb_test,
-                                                                          y_test, clf_head_lookup[clf], clf_params,
-                                                                          wrapper_params, cw,  max_epochs,
-                                                                          dataset.multi_label)
+                try: # salsa might fail
+                    if use_cv:
+                        f1, prec, rec, predictions, ep = eval_cv(dataset, clf_head_lookup[clf], clf_params, wrapper_params,
+                                                                 max_epochs)
+                    else:
+                        f1, prec, rec, predictions, ep = train_eval_one_split(emb_train, y_train, emb_dev, y_dev, emb_test,
+                                                                              y_test, clf_head_lookup[clf], clf_params,
+                                                                              wrapper_params, cw,  max_epochs,
+                                                                              dataset.multi_label)
 
-                # save predictions (for CV concatenate all predictions):
-                save_dict = {'predictions': predictions}
-                file_name = create_pred_savefile_name(pred_dir)
-                with open(file_name, "wb") as handle:
-                    pickle.dump(save_dict, handle)
+                    # save predictions (for CV concatenate all predictions):
+                    save_dict = {'predictions': predictions}
+                    file_name = create_pred_savefile_name(pred_dir)
+                    with open(file_name, "wb") as handle:
+                        pickle.dump(save_dict, handle)
+                except RuntimeError:
+                    print("learning failed for %s on %s" % (model_name, dataset_name))
+                    f1 = 0
+                    prec = 0
+                    rec = 0
+                    ep = 0
 
                 hidden_size = -1
                 hidden_size2 = -1
