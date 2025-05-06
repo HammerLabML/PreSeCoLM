@@ -201,8 +201,13 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                 with open(file_name, "wb") as handle:
                     pickle.dump(save_dict, handle)
 
-                hidden_size = clf_params['hidden_size'] if 'hidden_size' in clf_params.keys() else -1
-                hidden_size2 = clf_params['hidden_size'] if 'hidden_size' in clf_params.keys() else -1
+                hidden_size = -1
+                hidden_size2 = -1
+                if 'hidden_size' in clf_params.keys():
+                    hidden_size = clf_params['hidden_size']
+                elif 'hidden_size1' in clf_params.keys():
+                    hidden_size = clf_params['hidden_size1']
+                    hidden_size2 = clf_params['hidden_size2']
                 optim = list(optimizer_lookup.keys())[list(optimizer_lookup.values()).index(wrapper_params['optimizer'])]
                 loss = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
 
@@ -217,7 +222,7 @@ def run(config):
     # language models
     openai_models = config["openai_models"]
     huggingface_models = config["huggingface_models"]
-    model_names = huggingface_models + openai_models
+    model_names = openai_models + huggingface_models
 
     # dictionary with batch sizes for huggingface models
     with open(config["batch_size_lookup"], 'r') as f:
