@@ -5,3 +5,5 @@ from .bios import BiosDataset
 from .crowspairs import CrowSPairs
 from .jigsaw import JigsawBias
 from .twitter_aae import TwitterAAE
+from .sbic import SBICDataset
+

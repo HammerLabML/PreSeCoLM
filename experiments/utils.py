@@ -20,10 +20,11 @@ SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "dist
                                 "roberta-base", "roberta-large", "distilroberta-base",
                                 "google/electra-small-discriminator", "google/electra-base-discriminator", "google/electra-large-discriminator",
                                 "EleutherAI/pythia-160m", "EleutherAI/pythia-410m", "EleutherAI/pythia-1b", "EleutherAI/pythia-1.4b",
-                                "meta-llama/Llama-3.2-1B", "meta-llama/Llama-3.2-1B-Instruct",
+                                "meta-llama/Llama-3.2-1B", "meta-llama/Llama-3.2-1B-Instruct", "meta-llama/Llama-3.2-3B", "meta-llama/Llama-3.2-3B-Instruct",
                                 "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", "deepseek-ai/deepseek-llm-7b-base",
                                 "facebook/bart-base", "facebook/bart-large", "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b",
-                                "google-t5/t5-small", "google-t5/t5-base", "google/ul2", "google/flan-t5-base", "google/flan-ul2"]
+                                "google-t5/t5-small", "google-t5/t5-base",
+                                "xlnet/xlnet-base-cased", "xlnet/xlnet-large-cased"]
 # possible other models (test):
 # "openai-gpt"
 # "xlm-roberta-base", "xlm-roberta-large",
