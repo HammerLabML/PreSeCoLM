@@ -100,6 +100,7 @@ class CustomDataset:
 
         # compute class and group weights
         for split in self.splits:
+            print("compute class weights for split %s ")
             if self.multi_label:
                 self.class_weights[split] = compute_class_weights(self.labels[split], self.class_names)
             else:

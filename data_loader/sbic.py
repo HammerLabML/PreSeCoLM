@@ -2,7 +2,7 @@ from .dataset import CustomDataset
 import pandas as pd
 import datasets
 import numpy as np
-import os
+import itertools
 
 
 def merge_minority_lists(series):
@@ -45,15 +45,20 @@ def merge_split(ds, local_dir):
     def map_merged_minorities(targets):
         if pd.isna(targets):
             return ''
-        groups = [grp.strip() for grp in str(targets).split(',')]
-        merged = [str(minority_map.get(g, '')).strip() for g in groups]
-        merged_cleaned = [m for m in merged if m and isinstance(m, str)]
-        return ', '.join(sorted(set(merged_cleaned)))
+        groups = [grp.strip() for grp in str(targets).split(', ')]
+        merged = [minority_map.get(g, '').split(', ') for g in groups]
+        merged = list(itertools.chain.from_iterable(merged))
+        if 'nan' in merged:
+            merged.remove('nan')
+        return list(set(merged))
 
     # Apply mapping function
     df['mergedMinority'] = df['merged_targetMinority'].apply(map_merged_minorities)
 
-    return df
+    merged = df.groupby('HITId', as_index=False)[
+        ['post', 'mean_offensiveYN', 'mean_intentYN', 'mean_sexYN', 'mergedMinority']].first()
+
+    return merged
 
 
 class SBICDataset(CustomDataset):
@@ -62,11 +67,19 @@ class SBICDataset(CustomDataset):
         super().__init__(local_dir)
 
         self.name = 'sbic'
-        self.group_names = ['white', 'black', 'asian', 'non-white', 'latin-american', 'hispanic', 'mixed race',
-                            'male', 'female', 'non-binary',
-                            'trans', 'bisexual', 'asexual', 'homosexual',
-                            'christian', 'catholic', 'jewish', 'atheists', 'muslim/islam']
-        # TODO: not found (but exist): 'lgbtq+', 'heterosexual', 'pagan', 'mormon', 'middle eastern', 'aboriginal', 'gender neutral', 'cis', 'religion', 'hindu'
+        # these groups do not appear in all splits:
+        # hetero, mormon, cis, hindu, asexual, feminists, pagan/atheist, blind
+
+        # very rare (<0.1% in test data):
+        # mixed race, non-binary, autism, activists, police, accident/ natural disaster
+        self.group_names = ['white', 'black', 'asian', 'non-white', 'latin-american', 'hispanic', 'mixed race', 'middle eastern', 'indigenous',
+                            'male', 'female', 'non-binary', 'trans', 'lgbtq+',
+                            'bisexual', 'homosexual',
+                            'christian', 'jewish', 'muslim/islam', 'religion',
+                            'physical illness/ disorder', 'mental illness/ disorder', 'physical disability', 'mental disability', 'autism',
+                            'overweight', 'children', 'minors', 'old people', 'bad looking',
+                            'poor', 'political group', 'feminist', 'liberal', 'conservatives', 'activists', 'police',
+                            'violence victims', 'sexual assault/harassment victims', 'holocaust victims', 'genocide victims', 'terrorism victims', 'shooting victims', 'accident/ natural disaster victims']
 
         self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
 
@@ -83,7 +96,7 @@ class SBICDataset(CustomDataset):
 
         self.protected_groups[split] = np.zeros((len(df), len(self.group_names)), dtype=int)
         for i, label in enumerate(self.group_names):
-            self.protected_groups[split][:, i] = df['mergedMinority'].apply(lambda x: 1 if label in str(x).split(',') else 0)
+            self.protected_groups[split][:, i] = df['mergedMinority'].apply(lambda x: 1 if label in x else 0)
 
     def load(self, local_dir=None):
         for split in ['train', 'test', 'validation']:
