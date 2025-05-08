@@ -103,7 +103,7 @@ class SBICDataset(CustomDataset):
             ds = datasets.load_dataset("allenai/social_bias_frames", split=split)
             df = merge_split(ds, local_dir)
             if split == 'validation':
-                split = 'val'
+                split = 'dev'
             self._set_split(df, split)
 
 
