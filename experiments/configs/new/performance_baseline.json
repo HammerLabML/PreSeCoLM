@@ -4,8 +4,6 @@
     "bert-large-uncased",
     "distilbert-base-uncased",
     "gpt2",
-    "gpt2-large",
-    "distilgpt2",
     "roberta-base",
     "roberta-large",
     "distilroberta-base",
@@ -35,6 +33,7 @@
   "plot_dir": "experiments/plots/performance/",
   "max_epochs": 50,
   "datasets": [
+    {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"},
     {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
     {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},
     {"name": "crows_pairs", "local_dir": null},
