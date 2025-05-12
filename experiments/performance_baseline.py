@@ -216,7 +216,7 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                     hidden_size = clf_params['hidden_size_factor']
                 optim = list(optimizer_lookup.keys())[list(optimizer_lookup.values()).index(wrapper_params['optimizer'])]
                 loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
-                emb_dim = emb_test.shape[1]
+                emb_dim = dataset.data_preprocessed[dataset.splits[0]].shape[1]
 
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture, 'baseline',
                                                    pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
