@@ -143,6 +143,7 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
     For one dataset and Backbone (model name + pooling) run the evaluation for all clf architecture and parameter
     choices.
     """
+    model_type, model_architecture = utils.get_model_type_architecture(model_name)
     dataset = utils.get_dataset_with_embeddings(emb_dir, dataset_name, model_name, pooling, batch_size, local_dir)
     print("run experiment for dataset %s, multi_label=%i" % (dataset_name, dataset.multi_label))
 
@@ -214,11 +215,12 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                 if 'hidden_size_factor' in clf_params.keys():
                     hidden_size = clf_params['hidden_size_factor']
                 optim = list(optimizer_lookup.keys())[list(optimizer_lookup.values()).index(wrapper_params['optimizer'])]
-                loss = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
+                loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
                 emb_dim = emb_test.shape[1]
 
-                results.loc[len(results.index)] = [dataset_name, model_name, pooling, clf, hidden_size, emb_dim,
-                                                   optim, wrapper_params['lr'], loss, f1, prec, rec, ep, file_name]
+                results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture, 'baseline',
+                                                   pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
+                                                   loss_fct, f1, prec, rec, ep, file_name]
 
     return results
 
@@ -242,7 +244,8 @@ def run(config):
     if not os.path.isdir(config['results_dir']):
         os.makedirs(config['results_dir'])
 
-    result_keys = ["dataset", "embedder", "pooling", "classifier", "clf hidden size", "clf hidden size 2", "optimizer",
+    result_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
+                   "clf hidden size factor", "emb size", "optimizer",
                    "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
 
     # read existing results or create new dataframe

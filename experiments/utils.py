@@ -125,6 +125,29 @@ def align_labels(y_test, y_pred, pred, label_test, label_pred):
     return y_test, y_pred, pred, label_shared, label_shared
 
 
+def get_model_type_architecture(model_name):
+    if model_name in SUPPORTED_OPENAI_MODELS:
+        return 'text-embedding-3', 'embedder'
+    else:
+        assert model_name in SUPPORTED_HUGGINGFACE_MODELS, "model '%s' is not among the supported openai or huggingface models!" % model_name
+        lm = models.get_pretrained_model(model_name, 2, batch_size=1)
+        architecture = 'encoder'
+        if lm.model.config.is_encoder_decoder:
+            architecture = 'encoder-decoder'
+        elif 'gpt' in model_name or 'xlnet' in model_name or 'opt' in model_name or 'llama' in model_name:
+            architecture = 'decoder'
+
+        model_family = 'unknown'
+        if 'pythia' in model_name:
+            model_family = 'pythia'
+        elif 'deepseek' in model_name:
+            model_family = 'deepseek'
+        elif 'model_type' in lm.model.config.__dict__.keys():
+            model_family = lm.model.config.model_type
+
+        return model_family, architecture
+
+
 def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str, pooling: str, batch_size: int,
                                 local_dir=None, defining_term_dict=None):
     assert (model_name in SUPPORTED_OPENAI_MODELS or model_name in SUPPORTED_HUGGINGFACE_MODELS), "model '%s' is not among the supported openai or huggingface models!" % model_name

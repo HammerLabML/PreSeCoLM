@@ -91,12 +91,12 @@ class SBICDataset(CustomDataset):
         self.data[split] = df.loc[:, 'post'].to_list()
 
         mean_lbl = df.loc[:, ['mean_offensiveYN', 'mean_intentYN', 'mean_sexYN']].to_numpy()
-        self.labels[split] = (mean_lbl > 0.5).astype('int')
+        self.labels[split] = (mean_lbl > 0.5).astype('float64')
         # TODO: filter uncertain labels? around ~15% of samples are between 0.4 and 0.6
 
-        self.protected_groups[split] = np.zeros((len(df), len(self.group_names)), dtype=int)
+        self.protected_groups[split] = np.zeros((len(df), len(self.group_names)))
         for i, label in enumerate(self.group_names):
-            self.protected_groups[split][:, i] = df['mergedMinority'].apply(lambda x: 1 if label in x else 0)
+            self.protected_groups[split][:, i] = df['mergedMinority'].apply(lambda x: 1 if label in x else 0).astype('float64')
 
     def load(self, local_dir=None):
         for split in ['train', 'test', 'validation']:
