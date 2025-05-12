@@ -100,7 +100,7 @@ class SBICDataset(CustomDataset):
 
     def load(self, local_dir=None):
         for split in ['train', 'test', 'validation']:
-            ds = datasets.load_dataset("allenai/social_bias_frames", split=split)
+            ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
             df = merge_split(ds, local_dir)
             if split == 'validation':
                 split = 'dev'
