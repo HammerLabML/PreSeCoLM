@@ -11,16 +11,28 @@ GROUPS_BY_BIAS_TYPES = {"race-color": ["black", "white", "asian"],
                         "religion": ["christian", "muslim", "jewish", "buddhist", "hindu"],
                         "age": ["old", "young"],
                         "physical-appearance": ["overweight", "underweight", "fit", "healthy", "tall", "short", "average_height", "good_looking", "bad_looking"],
-                        "disability": ["physical disability, sickness", "mental_disability_illness", "able bodied, non-stigmatized sickness", "mentally fit, neurotypical", "physically fit, gifted", "mentally gifted"],
+                        "disability": ["physical disability", "physical illness", "mental disability", "mental illness", "able bodied, non-stigmatized sickness", "mentally fit, neurotypical", "physically fit, gifted", "mentally gifted"],
                         "nationality": ["citizen", "foreigner, immigrant, undocumented", "iraq", "canadian", "british", "mexican", "us american", "russian", "polish", "armenian", "italian", "nigerian", "greek", "vietnamese", "irish", "chinese", "indian", "japanese", "saudi arabian", "australian", "dutch", "mongolian", "korean", "syrian", "kenyan", "swedish", "colombian", "pakistani", "thai", "german", "norwegian"]}
 
 TERMS_BY_GROUPS = {
     "black": ["black", "black people", "blacks", "african", "africans", "african-american", "african american", "afro-american", "african-americans", "african americans", "an afro-american", "african american", "african americans", "colored", "dark-skinned"],
     "white": ["white", "white people", "whites", "caucasian", "caucasians", "white american", "caucasian american", "anglo-american", "white americans", "caucasian americans", "a caucasian american", "anglo americans", "anglo american", "white", "light-skinned"],
-    "asian": ["asian", "asian people", "asians", "asian", "asians", "asian-american", "asian american", "asian-american", "asian-americans", "asian americans", "an asian-american", "asian american", "asian americans", "asian", "asian"],
+    "asian": ["asian", "asian people", "asians", "asian", "asians", "asian-american", "asian american", "asian-american", "asian-americans", "asian americans", "an asian-american", "asian american", "asian americans", "asian", "asian",
+              "vietnam", "vietnamese", "a vietnamese", "china", "chinese", "a chinese", "india", "indian", "indians", "an indian", "japan", "japanese", "a japanese", "mongolia", "mongolian", "mongolians", "a mongolian", "korea", "korean",
+              "koreans", "a korean", "pakistan", "pakistanti", "a pakistanti", "thailand", "thai", "a thai", "russia", "russian", "russians", "a russian", "armenia", "armenian", "armenians", "an armenian"],
 
-    "native american": ["native", "native american", "native americans"], "hispanic": ["latino", "latinos", "hispanic", "hispanics"],
+    "native american": ["native", "native american", "native americans"],
+    "hispanic": ["hispanic", "hispanics"],
+    "latino": ["latino", "latinos", "mexico", "mexican", "mexicans", "a mexican", "colombia", "colombian", "colombians", "a colombian"],
+    "african": ["nigeria", "nigerian", "nigerians", "a nigerian", "kenya", "kenyan", "kenyans", "a kenyan"],
+    "middle eastern": ["saudi arabia", "saudi arabian", "saudi arabians", "a saudi arabian", "syria", "syrian", "syrians", "a syrian"],
+    "european": ["great britian", "british", "english", "welsh", "scottish", "a brit", "an englishman", "a welsh", "a scotsman", "poland", "polish", "a polish", "italy", "italian", "italians", "an italian", "greece", "greek", "greeks",
+                 "a greek", "ireland", "irish", "irishman", "an irishman", "germany", "german", "germans", "a german", "norway", "norwegian", "norwegians", "a norwegian", "netherlands", "dutch", "dutchman", "a dutchman", "sweden", "swede",
+                 "swedish", "swedes", "a swede", "russia", "russian", "russians", "a russian"],
     # other ethnicities
+
+
+
 
     "poor": ["poor", "ghetto", "low income", "poverty stricken", "poverty", "low income", "trailer park", "welfare money", "on welfare", "homeless"],
     "rich": ["rich", "suburb", "high income", "over wealthy", "wealth", "wealthy", "high income", "high class", "gated community", "yacht", "billionaires"],
@@ -42,6 +54,7 @@ TERMS_BY_GROUPS = {
 
     "old": ["old", "older", "an old", "oldest", "elderly", "senior", "adults", "adult"],
     "young": ["young", "younger", "a young", "youngest", "teenager", "children", "child", "junior"],
+    "minors": ["teenager", "children", "child"],
 
     "overweight": ["fat", "overweight", "obese", "morbidly obese", "an obese", "heavy", "fatties"],
     "underweight": ["very thin", "thin", "skinny", "slim", "light", "underweight"],
@@ -54,8 +67,10 @@ TERMS_BY_GROUPS = {
     "bad_looking": ["ugly", "hunchback", "disfigured"],
 
     # TODO: reconsider these categories
-    "physical disability, sickness": ["wheelchair", "sickly", "disabled", "handicapped", "no legs", "hospital", "crippled", "a crippled", "paraplegic", "blind eye", "blind", "glasses", "aids"],
-    "mental_disability_illness": ["dyslexia", "retard", "retarded", "retards", "mentally ill", "autistic", "down syndrome", "demented", "alcoholic", "drug addict"],
+    "physical disability": ["wheelchair", "sickly", "disabled", "handicapped", "no legs", "hospital", "crippled", "a crippled", "paraplegic", "blind eye", "blind", "glasses"],
+    "physical illness": ["wheelchair", "sickly", "hospital", "crippled", "a crippled", "aids"],
+    "mental disability": ["dyslexia", "retard", "retarded", "retards", "autistic", "down syndrome"],
+    "mental illness": ["mentally ill", "demented", "alcoholic", "drug addict"],
     "able bodied, non-stigmatized sickness": ["healthy", "able-bodied", "able bodied", "all limbs", "able", "nondisabled", "of sound mind", "healthy man", "the cold"],
     "mentally fit, neurotypical": ["normal", "average iq", "mentally fit"],
     "physically fit, gifted": ["perfectly healthy", "athletic"],
@@ -63,35 +78,42 @@ TERMS_BY_GROUPS = {
 
     "citizen": ["a citizen", "citizen"],
     "foreigner, immigrant, undocumented": ["foreigner", "immigrants", "refugee", "undocumented", "illegals"],
-    "iraq": ["iraq", "iraqi", "an iraqui"],
+
     "canadian": ["canada", "canadian", "canadians", "a canadian"],
-    "british": ["great britian", "british", "english", "welsh", "scottish", "a brit", "an englishman", "a welsh", "a scotsman"],
     "mexican": ["mexico", "mexican", "mexicans", "a mexican"],
     "us american": ["american", "usa", "americans", "an american"],
-    "russian": ["russia", "russian", "russians", "a russian"],
+
+    "colombian": ["colombia", "colombian", "colombians", "a colombian"],
+
+    "british": ["great britian", "british", "english", "welsh", "scottish", "a brit", "an englishman", "a welsh", "a scotsman"],
     "polish": ["poland", "polish", "a polish"],
-    "armenian": ["armenia", "armenian", "armenians", "an armenian"],
     "italian": ["italy", "italian", "italians", "an italian"],
-    "nigerian": ["nigeria", "nigerian", "nigerians", "a nigerian"],
     "greek": ["greece", "greek", "greeks", "a greek"],
-    "vietnamese": ["vietnam", "vietnamese", "a vietnamese"],
     "irish": ["ireland", "irish", "irishman", "an irishman"],
+    "german": ["germany", "german", "germans", "a german"],
+    "norwegian": ["norway", "norwegian", "norwegians", "a norwegian"],
+    "dutch": ["netherlands", "dutch", "dutchman", "a dutchman"],
+    "swedish": ["sweden", "swede", "swedish", "swedes", "a swede"],
+
+    "nigerian": ["nigeria", "nigerian", "nigerians", "a nigerian"],
+    "kenyan": ["kenya", "kenyan", "kenyans", "a kenyan"],
+
+    "australian": ["australia", "australian", "australians", "an australian"],
+
+    "russian": ["russia", "russian", "russians", "a russian"],
+    "armenian": ["armenia", "armenian", "armenians", "an armenian"],
+
+    "saudi arabian": ["saudi arabia", "saudi arabian", "saudi arabians", "a saudi arabian"],
+    "syrian": ["syria", "syrian", "syrians", "a syrian"],
+
+    "vietnamese": ["vietnam", "vietnamese", "a vietnamese"],
     "chinese": ["china", "chinese", "a chinese"],
     "indian": ["india", "indian", "indians", "an indian"],
     "japanese": ["japan", "japanese", "a japanese"],
-    "saudi arabian": ["saudi arabia", "saudi arabian", "saudi arabians", "a saudi arabian"],
-    "australian": ["australia", "australian", "australians", "an australian"],
-    "dutch": ["netherlands", "dutch", "dutchman", "a dutchman"],
     "mongolian": ["mongolia", "mongolian", "mongolians", "a mongolian"],
     "korean": ["korea", "korean", "koreans", "a korean"],
-    "syrian": ["syria", "syrian", "syrians", "a syrian"],
-    "kenyan": ["kenya", "kenyan", "kenyans", "a kenyan"],
-    "swedish": ["sweden", "swede", "swedish", "swedes", "a swede"],
-    "colombian": ["colombia", "colombian", "colombians", "a colombian"],
     "pakistani": ["pakistan", "pakistanti", "a pakistanti"],
     "thai": ["thailand", "thai", "a thai"],
-    "german": ["germany", "german", "germans", "a german"],
-    "norwegian": ["norway", "norwegian", "norwegians", "a norwegian"]
 }
 
 GROUPS_TO_LABEL = ['black', 'white', 'asian', 'poor', 'rich', 'male', 'female', 'physical disability, sickness', 'mental_disability_illness', 'foreigner, immigrant, undocumented', 'canadian', 'us american', 'mexican', 'chinese', 'italian', 'british', 'russian', 'indian', 'homosexual', 'heterosexual', 'overweight', 'underweight', 'fit', 'tall', 'short', 'christian', 'muslim', 'jewish', 'old', 'young']

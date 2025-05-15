@@ -68,18 +68,22 @@ class SBICDataset(CustomDataset):
 
         self.name = 'sbic'
         # these groups do not appear in all splits:
-        # hetero, mormon, cis, hindu, asexual, feminists, pagan/atheist, blind
+        # hetero, mormon, cis, hindu, asexual, feminists, pagan/atheist, blind, ...
 
         # very rare (<0.1% in test data):
-        # mixed race, non-binary, autism, activists, police, accident/ natural disaster
-        self.group_names = ['white', 'black', 'asian', 'non-white', 'latin-american', 'hispanic', 'mixed race', 'middle eastern', 'indigenous',
+        # mixed race, non-binary, autism, activists, police, accident/ natural disaster, german, japanese, pakistani,
+        # russian, saudis, southern, syrian, blondes, catholic, incest victims, kidnapping victims, murder victims,
+        # pregnant, priest, red hair, short people, slavery victims, war/combat victims
+        self.group_names = ['white', 'black', 'asian', 'non-white', 'latin-american', 'hispanic', 'mixed race', 'middle eastern', 'indigenous', 'race',
                             'male', 'female', 'non-binary', 'trans', 'lgbtq+',
                             'bisexual', 'homosexual',
                             'christian', 'jewish', 'muslim/islam', 'religion',
-                            'physical illness/ disorder', 'mental illness/ disorder', 'physical disability', 'mental disability', 'autism',
+                            'physical illness/ disorder', 'mental illness/ disorder', 'physical disability', 'mental disability', 'autism', 'disability',
                             'overweight', 'children', 'minors', 'old people', 'bad looking',
                             'poor', 'political group', 'feminist', 'liberal', 'conservatives', 'activists', 'police',
-                            'violence victims', 'sexual assault/harassment victims', 'holocaust victims', 'genocide victims', 'terrorism victims', 'shooting victims', 'accident/ natural disaster victims']
+                            'violence victims', 'sexual assault/harassment victims', 'holocaust victims', 'genocide victims', 'terrorism victims', 'shooting victims', 'accident/ natural disaster victims',
+                            'african', 'european', 'american', 'arab', 'mexican', 'chinese', 'ethiopian', 'german', 'indian', 'japanese', 'pakistani', 'russian', 'saudis', 'southern', 'syrian',
+                            'blondes', 'catholic', 'immigrant', 'incest victims', 'kidnapping victims', 'minorities', 'murder victims', 'pregnant', 'priest', 'red hair', 'short people', 'slavery victims', 'war/ combat victims', 'young people']
 
         self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
 
@@ -102,6 +106,12 @@ class SBICDataset(CustomDataset):
         for split in ['train', 'test', 'validation']:
             ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
             df = merge_split(ds, local_dir)
+            all_groups = []
+            for sample in df.loc[:,'mergedMinority']:
+                for group in sample:
+                    if not group in all_groups:
+                        all_groups.append(group)
+            print(all_groups)
             if split == 'validation':
                 split = 'dev'
             self._set_split(df, split)

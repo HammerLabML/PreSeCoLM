@@ -4,9 +4,12 @@ from .helper import simplify_text
 import datasets
 import numpy as np
 
-terms_race = {'european/white': ['ukrainian', 'norway', 'spain', 'italy', 'britain', 'norweigan', 'crimean', 'russian', 'white people', 'white'],
-              'african/black': ['sierra leon', 'eriteria', 'somalia', 'african', 'eritrean', 'sierra leone', 'somalia', 'morocco', 'ethiopian', 'ethiopia', 'ghanaian', 'cameroon', 'cape verde', 'black people', 'black'],
-              'hispanic': ['ecuador', 'spain', 'columbian', 'hispanic'],
+terms_race = {'european': ['ukrainian', 'norway', 'spain', 'italy', 'britain', 'norweigan', 'crimean', 'russian'],
+              'white': ['white people', 'white'],
+              'african': ['sierra leon', 'eriteria', 'somalia', 'african', 'eritrean', 'sierra leone', 'somalia', 'morocco', 'ethiopian', 'ethiopia', 'ghanaian', 'cameroon', 'cape verde'],
+              'black': ['black people', 'black'],
+              'hispanic': ['spain', 'hispanic'],
+              'latin-american': ['ecuador', 'columbian'],
               'south east asian': ['indian', 'japanese', 'vietnam', 'bengali', 'bangladesh', 'korean', 'asian', 'indonesia', 'asia'],
               'middle east': ['lebanon', 'iranian', 'persian', 'iraq', 'yemen', 'syrian', 'arab', 'saudi arabia', 'jordan', 'syria', 'saudi arabian', 'afghanistan', 'afghanistansuch']
               }
