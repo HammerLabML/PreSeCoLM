@@ -48,11 +48,14 @@ LABEL_MATCHES = {'M': 'male', 'F': 'female',
 def defining_terms_labels_from_dict(term_dict: dict) -> (list, np.ndarray):
     terms = []
     lbl = []
-    cur_lbl = 0
+    cur_lbl = 1
     for key, cur_terms in term_dict.items():
         terms += cur_terms
-        lbl += [cur_lbl for t in cur_terms]
-        cur_lbl += 1
+        if key == 'neutral':
+            lbl += [0 for t in cur_terms]
+        else:
+            lbl += [cur_lbl for t in cur_terms]
+            cur_lbl += 1
 
     return terms, np.asarray(lbl)
 
