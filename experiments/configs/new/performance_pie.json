@@ -28,6 +28,7 @@
   ],
   "embedding_dir": "../../artifacts/embeddings/",
   "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
+  "def_term_file": "experiments/configs/new/defining_terms.yaml",
   "results_dir": "experiments/results/performance/",
   "pred_dir": "../../artifacts/pie_baseline_predictions/",
   "plot_dir": "experiments/plots/performance/",
@@ -57,6 +58,10 @@
       ]
     },
     "wrapper": {
+      "n_other_concepts": 0,
+      "method_protec": ["bias_space"],
+      "method_unsup": ["pca"],
+      "remove_protected_features": true,
       "optimizer": [
         "Salsa"
       ],

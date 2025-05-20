@@ -44,6 +44,70 @@ LABEL_MATCHES = {'M': 'male', 'F': 'female',
                  'homosexual_gay_or_lesbian': 'homosexual',
                  'psychiatric_or_mental_illness': 'mental_disability_illness'}
 
+
+def defining_terms_labels_from_dict(term_dict: dict) -> (list, np.ndarray):
+    terms = []
+    lbl = []
+    cur_lbl = 0
+    for key, cur_terms in term_dict.items():
+        terms += cur_terms
+        lbl += [cur_lbl for t in cur_terms]
+        cur_lbl += 1
+
+    return terms, np.asarray(lbl)
+
+
+def select_def_terms_for_dataset(def_terms_per_attr: dict, group_matches: dict):
+    groups = []
+    for k, v in group_matches.items():
+        groups += v
+
+    new_dict = {}
+    for attr, terms_per_group in def_terms_per_attr.items():
+        need_attr = False
+        for group, def_terms in terms_per_group.items():
+            if group in groups:
+                need_attr = True
+        if need_attr:
+            new_dict.update({attr: terms_per_group})
+
+    return new_dict
+
+
+def get_multi_attr_def_terms_labels(term_dicts: dict) -> (list, np.ndarray):
+    n_attr = len(term_dicts)
+    cur_col = 0
+
+    terms_stacked = []
+    lbl_stacked = []
+    group_lbl = []
+    for attr, td in term_dicts.items():
+        terms, lbl = defining_terms_labels_from_dict(td)
+
+        # transform single-label into multi-label arr (set one column with current lbl, everything else as -1)
+        lbl_resized = np.ones((len(terms), n_attr)) * -1
+        lbl_resized[:, cur_col] = lbl
+
+        terms_stacked += terms
+        lbl_stacked.append(lbl_resized)
+        cur_col += 1
+
+        cur_groups = []
+        for key in td.keys():
+            if key != 'neutral':
+                cur_groups.append(key)
+        group_lbl.append(cur_groups)
+
+    lbl_stacked = np.vstack(lbl_stacked)
+
+    # count total number of labels (excl. -1)
+    n_lbl = 0
+    for col in range(lbl_stacked.shape[1]):
+        n_lbl += len(np.unique(lbl_stacked[:, col])) - 1
+
+    return terms_stacked, lbl_stacked, n_lbl, group_lbl
+
+
 def add_contrastive_any_labels(g_test, group_names):
     n_groups = g_test.shape[1]
     new_shape = (g_test.shape[0], n_groups * 2 + 1)

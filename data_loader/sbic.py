@@ -83,7 +83,7 @@ class SBICDataset(CustomDataset):
                             'poor', 'political group', 'feminist', 'liberal', 'conservatives', 'activists', 'police',
                             'violence victims', 'sexual assault/harassment victims', 'holocaust victims', 'genocide victims', 'terrorism victims', 'shooting victims', 'accident/ natural disaster victims',
                             'african', 'european', 'american', 'arab', 'mexican', 'chinese', 'ethiopian', 'german', 'indian', 'japanese', 'pakistani', 'russian', 'saudis', 'southern', 'syrian',
-                            'blondes', 'catholic', 'immigrant', 'incest victims', 'kidnapping victims', 'minorities', 'murder victims', 'pregnant', 'priest', 'red hair', 'short people', 'slavery victims', 'war/ combat victims', 'young people']
+                            'blondes', 'catholic', 'immigrant', 'incest victims', 'kidnapping victims', 'minorities', 'murder victims', 'pregnant', 'priest', 'red hair', 'short people', 'slavery victims', 'war/ combat victims', 'young']
 
         self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
 
