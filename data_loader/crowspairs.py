@@ -2,17 +2,8 @@ import datasets
 import numpy as np
 
 from .dataset import CustomDataset
-from .helper import simplify_text, get_diff
+from .helper import simplify_text
 
-GROUPS_BY_BIAS_TYPES = {"race-color": ["black", "white", "asian"],
-                        "socioeconomic": ["poor", "rich"],
-                        "gender": ["male", "female"],
-                        "sexual-orientation": ["homosexual", "heterosexual", "bisexual"],
-                        "religion": ["christian", "muslim", "jewish", "buddhist", "hindu"],
-                        "age": ["old", "young"],
-                        "physical-appearance": ["overweight", "underweight", "fit", "healthy", "tall", "short", "average_height", "good_looking", "bad_looking"],
-                        "disability": ["physical disability", "physical illness", "mental disability", "mental illness", "able bodied, non-stigmatized sickness", "mentally fit, neurotypical", "physically fit, gifted", "mentally gifted"],
-                        "nationality": ["citizen", "foreigner, immigrant, undocumented", "canadian", "british", "mexican", "us american", "russian", "polish", "armenian", "italian", "nigerian", "greek", "vietnamese", "irish", "chinese", "indian", "japanese", "saudi arabian", "australian", "dutch", "mongolian", "korean", "syrian", "kenyan", "swedish", "colombian", "pakistani", "thai", "german", "norwegian"]}
 
 TERMS_BY_GROUPS = {
     "black": ["black", "black people", "blacks", "african", "africans", "african-american", "african american", "afro-american", "african-americans", "african americans", "an afro-american", "african american", "african americans", "colored", "dark-skinned"],
@@ -63,11 +54,13 @@ TERMS_BY_GROUPS = {
     "good_looking": ["beautiful", "cute", "handsome", "attractive"],
     "bad_looking": ["ugly", "hunchback", "disfigured"],
 
-    # TODO: reconsider these categories
-    "physical disability": ["wheelchair", "sickly", "disabled", "handicapped", "no legs", "hospital", "crippled", "a crippled", "paraplegic", "blind eye", "blind", "glasses"],
+    "physical disability": ["wheelchair", "sickly", "disabled", "handicapped", "no legs", "hospital", "crippled",
+                            "a crippled", "paraplegic", "blind eye", "blind", "glasses"],
     "physical illness": ["wheelchair", "sickly", "hospital", "crippled", "a crippled", "aids"],
     "mental disability": ["dyslexia", "retard", "retarded", "retards", "autistic", "down syndrome"],
     "mental illness": ["mentally ill", "demented", "alcoholic", "drug addict"],
+
+    # nationalities, some not-protected groups (as counterparts to disability)
     "able bodied, non-stigmatized sickness": ["healthy", "able-bodied", "able bodied", "all limbs", "able", "nondisabled", "of sound mind", "healthy man", "the cold"],
     "mentally fit, neurotypical": ["normal", "average iq", "mentally fit"],
     "physically fit, gifted": ["perfectly healthy", "athletic"],
@@ -120,30 +113,7 @@ GROUPS_TO_LABEL = ['black', 'white', 'asian',
                    'foreigner, immigrant, undocumented', 'canadian', 'us american', 'mexican', 'chinese', 'italian', 'british', 'russian', 'indian',
                    'homosexual', 'heterosexual', 'bisexual',
                    'overweight', 'underweight', 'fit', 'tall', 'short', 'old', 'young',
-                   'christian', 'muslim', 'jewish', 'buddhist', 'hindu']
-
-
-def get_group_label(modified_terms: list, bias_type: str):
-    if bias_type not in GROUPS_BY_BIAS_TYPES.keys():
-        return None, None
-    assert len(modified_terms) > 0
-
-    group_lbl = None
-    terms_missing = {group: [] for group in GROUPS_BY_BIAS_TYPES[bias_type]}
-    for group in GROUPS_BY_BIAS_TYPES[bias_type]:
-        group_terms = TERMS_BY_GROUPS[group]
-        for term in modified_terms:
-            if not term in group_terms:
-                terms_missing[group].append(term)
-        if len(terms_missing[group]) == 0:
-            group_lbl = group
-            break
-
-    missing = []
-    for group in GROUPS_BY_BIAS_TYPES[bias_type]:
-        missing += terms_missing[group]
-
-    return group_lbl, list(set(missing))
+                   'christian', 'muslim', 'jewish']
 
 
 def group_mentioned_in_sentence(sentence, group_terms):
@@ -180,11 +150,6 @@ class CrowSPairs(CustomDataset):
         self.protected_groups['test'] = np.zeros((n_sent, n_groups))
 
         for sample in dataset:
-            bias_type = bias_types[sample['bias_type']]
-            mod1, mod2 = get_diff(sample['sent_more'], sample['sent_less'])
-            sample['group_more'], sample['terms_missing_more'] = get_group_label(mod1, bias_type)
-            sample['group_less'], sample['terms_missing_less'] = get_group_label(mod2, bias_type)
-
             self.data['test'].append(sample['sent_more'])
             self.data['test'].append(sample['sent_less'])
             self.labels['test'].append(sample['stereo_antistereo'])
