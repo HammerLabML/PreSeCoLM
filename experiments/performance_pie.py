@@ -207,7 +207,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     # add input and output size (matching the embedding size to clf parameters)
     clf_parameters = copy.deepcopy(clf_param_dict)
     clf_parameters['wrapper']['n_concepts_protec'] = n_protected_concepts
-    n_concepts = clf_parameters['wrapper']['n_concepts_protec'] + clf_parameters['wrapper']['n_concepts_unsup']
+    n_concepts = clf_parameters['wrapper']['n_concepts_protec'] + clf_parameters['wrapper']['n_concepts_unsup'][0]
 
     for key in clf_param_dict:
         if key != 'wrapper':
@@ -244,6 +244,15 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
             for wrapper_params in clf_parameter_sets['wrapper']:
+                n_concepts = wrapper_params['n_concepts_protec'] + wrapper_params['n_concepts_unsup']
+
+                if n_concepts > emb_def_attr.shape[1]:
+                    print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the embedding size")
+                    continue
+
+                # set clf input size
+                clf_params['input_size'] = n_concepts
+
                 try:  # salsa might fail
                     if use_cv:
                         f1, prec, rec, corr, pval, sel_groups_pie, \
