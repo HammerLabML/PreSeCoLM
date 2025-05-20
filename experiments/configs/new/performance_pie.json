@@ -58,7 +58,7 @@
       ]
     },
     "wrapper": {
-      "n_concepts_other": 0,
+      "n_concepts_unsup": 0,
       "method_protec": ["bias_space"],
       "method_unsup": ["pca"],
       "remove_protected_features": true,

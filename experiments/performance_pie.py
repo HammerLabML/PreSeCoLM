@@ -207,7 +207,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     # add input and output size (matching the embedding size to clf parameters)
     clf_parameters = copy.deepcopy(clf_param_dict)
     clf_parameters['wrapper']['n_concepts_protec'] = n_protected_concepts
-    n_concepts = clf_parameters['wrapper']['n_concepts_protec'] + clf_parameters['wrapper']['n_concepts_other']
+    n_concepts = clf_parameters['wrapper']['n_concepts_protec'] + clf_parameters['wrapper']['n_concepts_unsup']
 
     for key in clf_param_dict:
         if key != 'wrapper':
