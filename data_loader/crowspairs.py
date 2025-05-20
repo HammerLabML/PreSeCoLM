@@ -116,7 +116,14 @@ TERMS_BY_GROUPS = {
     "thai": ["thailand", "thai", "a thai"],
 }
 
-GROUPS_TO_LABEL = ['black', 'white', 'asian', 'poor', 'rich', 'male', 'female', 'physical disability, sickness', 'mental_disability_illness', 'foreigner, immigrant, undocumented', 'canadian', 'us american', 'mexican', 'chinese', 'italian', 'british', 'russian', 'indian', 'homosexual', 'heterosexual', 'overweight', 'underweight', 'fit', 'tall', 'short', 'christian', 'muslim', 'jewish', 'old', 'young']
+GROUPS_TO_LABEL = ['black', 'white', 'asian',
+                   'poor', 'rich',
+                   'male', 'female',
+                   'physical disability', 'mental disability', 'physical illness', 'mental illness',
+                   'foreigner, immigrant, undocumented', 'canadian', 'us american', 'mexican', 'chinese', 'italian', 'british', 'russian', 'indian',
+                   'homosexual', 'heterosexual', 'bisexual',
+                   'overweight', 'underweight', 'fit', 'tall', 'short', 'old', 'young',
+                   'christian', 'muslim', 'jewish', 'buddhist', 'hindu']
 
 
 def get_group_label(modified_terms: list, bias_type: str):
