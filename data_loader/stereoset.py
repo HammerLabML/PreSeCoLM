@@ -10,6 +10,7 @@ terms_race = {'european': ['ukrainian', 'norway', 'spain', 'italy', 'britain', '
               'black': ['black people', 'black'],
               'hispanic': ['spain', 'hispanic'],
               'latin-american': ['ecuador', 'columbian'],
+              'hispanic/latino': ['spain', 'hispanic', 'ecuador', 'columbian'],
               'south east asian': ['indian', 'japanese', 'vietnam', 'bengali', 'bangladesh', 'korean', 'asian', 'indonesia', 'asia'],
               'middle east': ['lebanon', 'iranian', 'persian', 'iraq', 'yemen', 'syrian', 'arab', 'saudi arabia', 'jordan', 'syria', 'saudi arabian', 'afghanistan', 'afghanistansuch']
               }

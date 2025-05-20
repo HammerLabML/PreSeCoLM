@@ -607,7 +607,8 @@ group_matching:
     - european
     female:
     - female
-    hispanic: hispanic
+    hispanic:
+    - hispanic
     hispanic/latino:
     - latino/hispanic
     jewish:
