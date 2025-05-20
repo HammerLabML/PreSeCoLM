@@ -261,7 +261,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                                                                              dataset.multi_label)
 
                     # save predictions (for CV concatenate all predictions):
-                    save_dict = {'predictions': predictions}
+                    save_dict = {'predictions': predictions, 'concepts': concepts, 'groups_pie': sel_groups_pie}
                     file_name = create_pred_savefile_name(pred_dir)
                     with open(file_name, "wb") as handle:
                         pickle.dump(save_dict, handle)
