@@ -136,7 +136,7 @@ defining_terms:
     - an asian
     - some asian
     - the person is asian
-    hispanic/latino:
+    latino/hispanic:
     - hispanic people
     - hispanics
     - latin-american
@@ -534,7 +534,7 @@ group_matching:
     - asian
     latino:
     - latino
-    - hispanic/latino
+    - latino/hispanic
     christian:
     - christian
     jewish:
@@ -571,10 +571,10 @@ group_matching:
       - asian
     latin-american:
       - latino
-      - hispanic/latino
+      - latino/hispanic
     hispanic:
       - hispanic
-      - hispanic/latino
+      - latino/hispanic
     middle eastern:
       - middle eastern
     african:
@@ -615,7 +615,7 @@ group_matching:
     - hindu
     hispanic: hispanic
     hispanic/latino:
-    - hispanic/latino
+    - latino/hispanic
     jewish:
     - jewish
     latin-american:
