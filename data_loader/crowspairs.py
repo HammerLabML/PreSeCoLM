@@ -164,7 +164,7 @@ class CrowSPairs(CustomDataset):
         self.prepare()
 
     def load(self, local_dir=None):
-        dataset = datasets.load_dataset('crows_pairs', split='test')
+        dataset = datasets.load_dataset('crows_pairs', split='test', trust_remote_code=True)
         n_sent = len(dataset) * 2  # each sample includes two sentences
 
         bias_types = dataset.info.features['bias_type'].names
