@@ -74,8 +74,8 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     #epochs = wrapper.fit_early_stopping(emb_train, y_train, emb_val, y_val, max_epochs=epochs, delta=0.001, patience=10)
     #pred = wrapper.predict(emb_test)
     pipeline = TorchPipelineForEmbeddings(clf, **cur_wrapper_params, class_weights=class_weights)
-    epochs = pipeline.fit_early_stopping(emb_protec=emb_def_attr, y_protec=g_def, emb_task=emb_train, y_task=y_train,
-                                         emb_val=emb_val, attr_lbl=attr_lbl, group_lbl=groups_pie, y_val=y_val,
+    epochs = pipeline.fit_early_stopping(emb_protec=emb_def_attr, y_protec=g_def, emb_train=emb_train, y_train=y_train,
+                                         emb_val=emb_val, y_val=y_val, attr_lbl=attr_lbl, group_lbl=groups_pie,
                                          max_epochs=epochs, delta=0.01, patience=10,)
     pred, concepts = pipeline.predict(emb_test, return_concepts=True, verbose=True)
 
