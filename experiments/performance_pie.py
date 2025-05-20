@@ -300,8 +300,12 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                 for i, (group_test, group_pie) in enumerate(zip(sel_groups, sel_groups_pie)):
                     results_concepts.loc[len(results_concepts.index)] = [dataset_name, model_name, model_type,
                                                                          model_architecture, 'pie', pooling, clf,
-                                                                         hidden_size, emb_dim, optim,
-                                                                         wrapper_params['lr'], loss_fct,
+                                                                         hidden_size, emb_dim, n_protected_concepts,
+                                                                         wrapper_params['n_concepts_protec'],
+                                                                         wrapper_params['method_protec'],
+                                                                         wrapper_params['method_unsup'],
+                                                                         wrapper_params['remove_protected_features'],
+                                                                         optim, wrapper_params['lr'], loss_fct,
                                                                          group_pie, group_test, corr[i], pval[i], ep,
                                                                          file_name]
 
@@ -345,8 +349,11 @@ def run(config):
 
     # results for concepts
     result_concept_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
-                           "clf hidden size factor", "emb size", "optimizer", "lr", "loss",
+                           "clf hidden size factor", "emb size", "protected concepts", "other concepts",
+                           "method protected", "method unsupervised", "remove protected",
+                           "optimizer", "lr", "loss",
                            "group (pie)", "group (test)", "Pearson R", "pvalue", "Epochs", "concepts"]
+
     results_concept_path = config['results_dir'] + 'pie_concept_results.csv'
     if os.path.isfile(results_concept_path):
         results_concept = pd.read_csv(results_concept_path)
