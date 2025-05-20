@@ -12,7 +12,7 @@ GROUPS_BY_BIAS_TYPES = {"race-color": ["black", "white", "asian"],
                         "age": ["old", "young"],
                         "physical-appearance": ["overweight", "underweight", "fit", "healthy", "tall", "short", "average_height", "good_looking", "bad_looking"],
                         "disability": ["physical disability", "physical illness", "mental disability", "mental illness", "able bodied, non-stigmatized sickness", "mentally fit, neurotypical", "physically fit, gifted", "mentally gifted"],
-                        "nationality": ["citizen", "foreigner, immigrant, undocumented", "iraq", "canadian", "british", "mexican", "us american", "russian", "polish", "armenian", "italian", "nigerian", "greek", "vietnamese", "irish", "chinese", "indian", "japanese", "saudi arabian", "australian", "dutch", "mongolian", "korean", "syrian", "kenyan", "swedish", "colombian", "pakistani", "thai", "german", "norwegian"]}
+                        "nationality": ["citizen", "foreigner, immigrant, undocumented", "canadian", "british", "mexican", "us american", "russian", "polish", "armenian", "italian", "nigerian", "greek", "vietnamese", "irish", "chinese", "indian", "japanese", "saudi arabian", "australian", "dutch", "mongolian", "korean", "syrian", "kenyan", "swedish", "colombian", "pakistani", "thai", "german", "norwegian"]}
 
 TERMS_BY_GROUPS = {
     "black": ["black", "black people", "blacks", "african", "africans", "african-american", "african american", "afro-american", "african-americans", "african americans", "an afro-american", "african american", "african americans", "colored", "dark-skinned"],
@@ -30,9 +30,6 @@ TERMS_BY_GROUPS = {
                  "a greek", "ireland", "irish", "irishman", "an irishman", "germany", "german", "germans", "a german", "norway", "norwegian", "norwegians", "a norwegian", "netherlands", "dutch", "dutchman", "a dutchman", "sweden", "swede",
                  "swedish", "swedes", "a swede", "russia", "russian", "russians", "a russian"],
     # other ethnicities
-
-
-
 
     "poor": ["poor", "ghetto", "low income", "poverty stricken", "poverty", "low income", "trailer park", "welfare money", "on welfare", "homeless"],
     "rich": ["rich", "suburb", "high income", "over wealthy", "wealth", "wealthy", "high income", "high class", "gated community", "yacht", "billionaires"],
