@@ -105,8 +105,11 @@ def get_multi_attr_def_terms_labels(term_dicts: dict) -> (list, np.ndarray):
 
     # count total number of labels (excl. -1)
     n_lbl = 0
-    for col in range(lbl_stacked.shape[1]):
-        n_lbl += len(np.unique(lbl_stacked[:, col])) - 1
+    for groups in group_lbl:
+        if len(groups) == 1: # only 1D bias space
+            n_lbl += 1
+        else:
+            n_lbl += len(groups)+1  # on for each group + any dir
 
     return terms_stacked, lbl_stacked, n_lbl, group_lbl
 

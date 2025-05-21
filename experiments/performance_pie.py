@@ -53,26 +53,29 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
                          attr_lbl: list, clf_class: torch.nn.Module, cur_clf_params: dict, cur_wrapper_params: dict,
                          class_weights: np.ndarray, epochs: int, multi_label: bool) -> (float, float, float):
     clf_params = copy.deepcopy(cur_clf_params)
-    n_features = emb_train.shape[1]
-    clf_params['input_size'] = n_features
+    
+    # set clf input size
+    n_concepts = cur_wrapper_params['n_concepts_protec'] + cur_wrapper_params['n_concepts_unsup']
+    clf_params['input_size'] = n_concepts
+    
     if 'hidden_size_factor' in cur_clf_params.keys():
         assert (0 < clf_params['hidden_size_factor'] <= 1)
         if clf_class == models.MLP3Layer:
             # got 2 hidden layers
-            clf_params['hidden_size1'] = int(n_features * clf_params['hidden_size_factor'])
+            clf_params['hidden_size1'] = int(n_concepts * clf_params['hidden_size_factor'])
             clf_params['hidden_size2'] = int(clf_params['hidden_size1'] * clf_params['hidden_size_factor'])
         else:
-            clf_params['hidden_size'] = int(n_features * clf_params['hidden_size_factor'])
+            clf_params['hidden_size'] = int(n_concepts * clf_params['hidden_size_factor'])
         clf_params.pop('hidden_size_factor', None)
+
+    #print(clf_params)
+    #print(cur_wrapper_params)
 
     if not multi_label and y_train.ndim > 1:
         y_train = np.squeeze(y_train)
         y_val = np.squeeze(y_val)
 
     clf = clf_class(**clf_params)
-    #wrapper = models.ClfWrapper(clf, **cur_wrapper_params, class_weights=class_weights)
-    #epochs = wrapper.fit_early_stopping(emb_train, y_train, emb_val, y_val, max_epochs=epochs, delta=0.001, patience=10)
-    #pred = wrapper.predict(emb_test)
     pipeline = TorchPipelineForEmbeddings(clf, **cur_wrapper_params, class_weights=class_weights)
     epochs = pipeline.fit_early_stopping(emb_protec=emb_def_attr, y_protec=g_def, emb_train=emb_train, y_train=y_train,
                                          emb_val=emb_val, y_val=y_val, attr_lbl=attr_lbl, group_lbl=groups_pie,
@@ -89,6 +92,12 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     rec = recall_score(y_test, y_pred, average='macro')
     print("F1 score: %.2f, Precision: %.2f, Recall: %.2f" % (f1, prec, rec))
 
+    # groups_pie is a list of lists -> create one list for matches
+    groups_pie = list(itertools.chain(*groups_pie))
+    print(groups_test)
+    print(groups_pie)
+
+    
     # compute Pearson correlation of matching PIE concepts with the test groups
     corrs = []
     pvalues = []
@@ -172,7 +181,7 @@ def get_parameter_sets(choices_per_param: dict):
 def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, defining_term_lookup: dict,
                          group_match_lookup: dict, dataset_name: str, model_name: str, pooling: str,
                          batch_size: int, emb_dir: str, clf_param_dict: dict, pred_dir: str, max_epochs: int,
-                         local_dir: str = None) -> pd.DataFrame:
+                         emb_dim: int, local_dir: str = None) -> pd.DataFrame:
     """
     For one dataset and Backbone (model name + pooling) run the evaluation for all clf architecture and parameter
     choices.
@@ -207,12 +216,12 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     # add input and output size (matching the embedding size to clf parameters)
     clf_parameters = copy.deepcopy(clf_param_dict)
     clf_parameters['wrapper']['n_concepts_protec'] = n_protected_concepts
-    n_concepts = clf_parameters['wrapper']['n_concepts_protec'] + clf_parameters['wrapper']['n_concepts_unsup'][0]
+    #n_concepts = clf_parameters['wrapper']['n_concepts_protec'] + clf_parameters['wrapper']['n_concepts_unsup'][0]
 
     for key in clf_param_dict:
         if key != 'wrapper':
             print("set input and output dim for clf: " + key)
-            clf_parameters[key]['input_size'] = n_concepts
+            #clf_parameters[key]['input_size'] = n_concepts
             clf_parameters[key]['output_size'] = dataset.n_classes
     clf_parameters['wrapper']['optimizer'] = [optimizer_lookup[optim] for optim in
                                               clf_param_dict['wrapper']['optimizer']]
@@ -244,14 +253,14 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
             for wrapper_params in clf_parameter_sets['wrapper']:
+                if wrapper_params['n_concepts_unsup'] == -1:
+                    wrapper_params['n_concepts_unsup'] = emb_dim - wrapper_params['n_concepts_protec']
+                    print(wrapper_params['n_concepts_unsup'])
                 n_concepts = wrapper_params['n_concepts_protec'] + wrapper_params['n_concepts_unsup']
 
                 if n_concepts > emb_def_attr.shape[1]:
-                    print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the embedding size")
+                    print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the embedding size" % wrapper_params['n_concepts_unsup'])
                     continue
-
-                # set clf input size
-                clf_params['input_size'] = n_concepts
 
                 try:  # salsa might fail
                     if use_cv:
@@ -274,14 +283,16 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     file_name = create_pred_savefile_name(pred_dir)
                     with open(file_name, "wb") as handle:
                         pickle.dump(save_dict, handle)
-                except RuntimeError:
+                except RuntimeError as error:
                     print("learning failed for %s on %s" % (model_name, dataset_name))
+                    print(error)
                     f1 = 0
                     prec = 0
                     rec = 0
                     ep = 0
                     file_name = 'na'
                     sel_groups_pie = []  # no concept results will be written to the csv
+                    exit(1)
 
                 hidden_size = -1
                 if 'hidden_size_factor' in clf_params.keys():
@@ -292,7 +303,9 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
 
                 # performance results (only one row per dataset and clf/wrapper params
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture, 'baseline',
-                                                   pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
+                                                   pooling, clf, hidden_size, emb_dim, n_protected_concepts,
+                                                   wrapper_params['n_concepts_unsup'], wrapper_params['method_protec'],
+                                                   wrapper_params['method_unsup'], wrapper_params['remove_protected_features'], optim, wrapper_params['lr'],
                                                    loss_fct, f1, prec, rec, ep, file_name]
 
                 # concept results (one row for each protected group)
@@ -301,7 +314,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     results_concepts.loc[len(results_concepts.index)] = [dataset_name, model_name, model_type,
                                                                          model_architecture, 'pie', pooling, clf,
                                                                          hidden_size, emb_dim, n_protected_concepts,
-                                                                         wrapper_params['n_concepts_protec'],
+                                                                         wrapper_params['n_concepts_unsup'],
                                                                          wrapper_params['method_protec'],
                                                                          wrapper_params['method_unsup'],
                                                                          wrapper_params['remove_protected_features'],
@@ -339,7 +352,8 @@ def run(config):
 
     # results for performance
     result_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
-                   "clf hidden size factor", "emb size", "optimizer",
+                   "clf hidden size factor", "emb size", "protected concepts", "other concepts",
+                   "method protected", "method unsupervised", "remove protected", "optimizer",
                    "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
     results_path = config['results_dir'] + 'pie_performance_results.csv'
     if os.path.isfile(results_path):
@@ -373,6 +387,9 @@ def run(config):
                 lm_emb_size = 1536
             elif model == 'text-embedding-3-large':
                 lm_emb_size = 3072
+            else:
+                lm_emb_size = 0
+                print("could not set emb size for model %s" % model)
 
         # set batch size and pooling choices
         pooling_choices = config["pooling"]
@@ -398,9 +415,11 @@ def run(config):
                                                    group_match_lookup[dataset_setup['name']],
                                                    dataset_setup['name'], model, pool, batch_size,
                                                    config['embedding_dir'], config['classifier'], config['pred_dir'],
-                                                   config['max_epochs'], local_dir=dataset_setup['local_dir'])
+                                                   config['max_epochs'], lm_emb_size,
+                                                   local_dir=dataset_setup['local_dir'])
                     print("save results for setup: %s, %s, %s" % (dataset_setup['name'], model, pool))
                     results.to_csv(results_path, index=False)
+                    results_concept.to_csv(results_concept_path, index=False)
 
 
 def main(argv):
