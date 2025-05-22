@@ -97,7 +97,14 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     print(groups_test)
     print(groups_pie)
 
-    
+    # extract the group names form the pipeline (format attr:group)
+    group_names_pipeline = []
+    for group in groups_pie:
+        for group2 in pipeline.group_lbl:
+            if group2.split(':')[1] == group:
+                group_names_pipeline.append(group2)
+    print(group_names_pipeline)
+
     # compute Pearson correlation of matching PIE concepts with the test groups
     corrs = []
     pvalues = []
@@ -106,7 +113,7 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
         matches = group_match_lookup[group]
         for match in matches:
             pid = groups_pie.index(match)
-            pie_matches.append(pipeline.group_lbl[pid])  # format is "attr:group"
+            pie_matches.append(group_names_pipeline[pid])
             r, p = scipy.stats.pearsonr(concepts[:, pid], g_test[:, tid])
             corrs.append(r)
             pvalues.append(p)
@@ -283,7 +290,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     file_name = create_pred_savefile_name(pred_dir)
                     with open(file_name, "wb") as handle:
                         pickle.dump(save_dict, handle)
-                except RuntimeError as error:
+                except ValueError as error:  # RuntimeError
                     print("learning failed for %s on %s" % (model_name, dataset_name))
                     print(error)
                     f1 = 0
