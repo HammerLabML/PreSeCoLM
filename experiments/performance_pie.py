@@ -290,7 +290,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     file_name = create_pred_savefile_name(pred_dir)
                     with open(file_name, "wb") as handle:
                         pickle.dump(save_dict, handle)
-                except ValueError as error:  # RuntimeError
+                except ValueError as error:
                     print("learning failed for %s on %s" % (model_name, dataset_name))
                     print(error)
                     f1 = 0
@@ -299,7 +299,15 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     ep = 0
                     file_name = 'na'
                     sel_groups_pie = []  # no concept results will be written to the csv
-                    exit(1)
+                except RuntimeError as error:
+                    print("learning failed for %s on %s" % (model_name, dataset_name))
+                    print(error)
+                    f1 = 0
+                    prec = 0
+                    rec = 0
+                    ep = 0
+                    file_name = 'na'
+                    sel_groups_pie = []  # no concept results will be written to the csv
 
                 hidden_size = -1
                 if 'hidden_size_factor' in clf_params.keys():

@@ -210,6 +210,13 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                     rec = 0
                     ep = 0
                     file_name = 'na'
+                except ValueError:
+                    print("learning failed for %s on %s" % (model_name, dataset_name))
+                    f1 = 0
+                    prec = 0
+                    rec = 0
+                    ep = 0
+                    file_name = 'na'
 
                 hidden_size = -1
                 if 'hidden_size_factor' in clf_params.keys():
