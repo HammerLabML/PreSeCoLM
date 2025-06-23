@@ -261,6 +261,10 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
         X_test, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
         g_train, groups, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
         g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+        n_samples_train = len(X_train)
+    else:
+        data_dict = dataset.get_cv_split(0)
+        n_samples_train = len(data_dict['train'][0])
 
     classifier_choices = [key for key in clf_parameters.keys() if key != 'wrapper']
     for clf in classifier_choices:
@@ -273,6 +277,9 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
 
                 if n_concepts > emb_def_attr.shape[1]:
                     print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the embedding size" % wrapper_params['n_concepts_unsup'])
+                    continue
+                if n_concepts > n_samples_train:
+                    print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the number of training samples" % wrapper_params['n_concepts_unsup'])
                     continue
 
                 try:  # salsa might fail

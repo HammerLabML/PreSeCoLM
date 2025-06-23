@@ -96,7 +96,7 @@ def get_embeddings(texts, dataset_name, split, embedding_model, emb_dir):
     return embeddings.astype(np.float32)
 
 
-def get_defining_term_embeddings(defining_term_dict: dict, embedding_model: str, emb_dir: str) -> dict:
+def get_defining_term_embeddings(defining_term_dict, embedding_model: str, emb_dir: str) -> dict:
     dict_path = (emb_dir+'word_phrase_dict_%s.pickle' % embedding_model)
     assert os.path.exists(dict_path), ("dictionary for defining terms does not exist: %s" % dict_path)
     with open(dict_path, 'rb') as handle:
@@ -105,13 +105,17 @@ def get_defining_term_embeddings(defining_term_dict: dict, embedding_model: str,
         assert prev_model == embedding_model, ("trying to load embeddings of %s, but savefile contains embeddings of %s" % (embedding_model, prev_model))
         word_phrase_emb_dict = loaded_dict['emb_dict']
 
-    emb_defining_attr = {attr: {} for attr in defining_term_dict.keys()}
-    for attr, dterms_dict in defining_term_dict.items():
-        for group, dterms in dterms_dict.items():
-            embs = []
-            for term in dterms:
-                assert term in word_phrase_emb_dict.keys(), ("term \"%s\" missing in embedding lookup" % term)
-                embs.append(word_phrase_emb_dict[term])
-            emb_defining_attr[attr][group] = np.asarray(embs, dtype=np.float32)
+    if isinstance(defining_term_dict, dict):
+        emb_defining_attr = {attr: {} for attr in defining_term_dict.keys()}
+        for attr, dterms_dict in defining_term_dict.items():
+            for group, dterms in dterms_dict.items():
+                embs = []
+                for term in dterms:
+                    assert term in word_phrase_emb_dict.keys(), ("term \"%s\" missing in embedding lookup" % term)
+                    embs.append(word_phrase_emb_dict[term])
+                emb_defining_attr[attr][group] = np.asarray(embs, dtype=np.float32)
+    else:  # list
+        assert isinstance(defining_term_dict, list), "expected list or dictionary with defining terms"
+        emb_defining_attr = np.asarray([word_phrase_emb_dict[term] for term in defining_term_dict])
     return emb_defining_attr
 
