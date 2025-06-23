@@ -1,6 +1,5 @@
 {
   "huggingface_models": [
-    "EleutherAI/pythia-160m",
     "bert-base-uncased",
     "bert-large-uncased",
     "distilbert-base-uncased",
@@ -14,6 +13,7 @@
     "google/electra-base-discriminator",
     "albert-base-v2",
     "albert-large-v2",
+    "EleutherAI/pythia-160m",
     "EleutherAI/pythia-410m",
     "EleutherAI/pythia-1b",
     "EleutherAI/pythia-1.4b",
@@ -35,10 +35,9 @@
   "max_epochs": 50,
   "datasets": [
     {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
-    {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},
     {"name": "crows_pairs", "local_dir": null},
-    {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"},
-    {"name": "stereoset", "local_dir": null}
+    {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},
+    {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"}
   ],
   "classifier": {
     "linear": {

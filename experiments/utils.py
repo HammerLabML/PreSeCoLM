@@ -255,19 +255,20 @@ def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str
             split_emb[split] = models.load_or_compute_embeddings(data, lm, dataset_name, split, emb_dir)
         dataset.set_preprocessed_data(split_emb)
 
-        if isinstance(defining_term_dict, dict):
-            # defining terms might be passed as dictionary (sorted by protected groups)
-            if defining_term_dict is not None:
-                emb_defining_attr_dict = {attr: {} for attr in defining_term_dict.keys()}
-                # defining terms is a list of defining attr for different attributes (list[list[list]])
-                print("embed defining terms...")
-                for attr, dterm_dict in defining_term_dict.items():
-                    for group, dterms in dterm_dict.items():
-                        emb_defining_attr_dict[attr][group] = lm.embed(dterms)
-        else:
-            # might also be a list, simply embed then
-            assert isinstance(defining_term_dict, list), "expected list or dictionary with defining terms"
-            emb_defining_attr_dict = lm.embed(defining_term_dict)
+        if defining_term_dict is not None:
+            if isinstance(defining_term_dict, dict):
+                # defining terms might be passed as dictionary (sorted by protected groups)
+                if defining_term_dict is not None:
+                    emb_defining_attr_dict = {attr: {} for attr in defining_term_dict.keys()}
+                    # defining terms is a list of defining attr for different attributes (list[list[list]])
+                    print("embed defining terms...")
+                    for attr, dterm_dict in defining_term_dict.items():
+                        for group, dterms in dterm_dict.items():
+                            emb_defining_attr_dict[attr][group] = lm.embed(dterms)
+            else:
+                # might also be a list, simply embed then
+                assert isinstance(defining_term_dict, list), "expected list or dictionary with defining terms"
+                emb_defining_attr_dict = lm.embed(defining_term_dict)
             
         lm.model.to('cpu')
         del lm

@@ -270,11 +270,14 @@ def run(config):
             lm_emb_size = lm.model.config.hidden_size
             lm.model = lm.model.to('cpu')
             del lm
-        else: # openai model
+        else:  # openai model
             if model == 'text-embedding-3-small':
                 lm_emb_size = 1536
             elif model == 'text-embedding-3-large':
                 lm_emb_size = 3072
+            else:
+                print("unknown model (%s), skip this" % model)
+                continue
 
         # set batch size and pooling choices
         pooling_choices = config["pooling"]
@@ -288,17 +291,17 @@ def run(config):
             for dataset_setup in config['datasets']:
                 # check if results exist and this setup can be skipped
                 if pool == '':
-                    cur_params = [dataset_setup['name'], model]
+                    cur_params_per_key = {'dataset': dataset_setup['name'], 'model': model}
                 else:
-                    cur_params = [dataset_setup['name'], model, pool]
-                cur_params_per_key = dict(zip(result_keys[:len(cur_params)], cur_params))
+                    cur_params_per_key = {'dataset': dataset_setup['name'], 'model': model,
+                                          'pooling': pool}
                 result_filter = functools.reduce(lambda a, b: a & b,
                                                  [(results[key] == val) for key, val in cur_params_per_key.items()])
 
                 if results.loc[result_filter].empty:
                     results = eval_all_clf_choices(results, dataset_setup['name'], model, pool, batch_size,
                                                    config['embedding_dir'], config['classifier'], config['pred_dir'],
-                                                   config['max_epochs'], lm_emb_size,local_dir=dataset_setup['local_dir'])
+                                                   config['max_epochs'], lm_emb_size, local_dir=dataset_setup['local_dir'])
                     print("save results for setup: %s, %s, %s" % (dataset_setup['name'], model, pool))
                     results.to_csv(results_path, index=False)
 

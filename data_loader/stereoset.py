@@ -75,7 +75,7 @@ class StereoSet(CustomDataset):
         # every sample has 3 sentences with different labels
         # there is only the validation set
         n_sent = len(ds['validation']) * 3
-        g_val = np.zeros((n_sent, n_groups), dtype=int)
+        g_val = np.zeros((n_sent, n_groups), dtype=float)
         y_val = np.zeros((n_sent, 1), dtype=int)
         sent_val = []
 
