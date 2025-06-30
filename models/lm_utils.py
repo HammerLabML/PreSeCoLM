@@ -116,6 +116,6 @@ def get_defining_term_embeddings(defining_term_dict, embedding_model: str, emb_d
                 emb_defining_attr[attr][group] = np.asarray(embs, dtype=np.float32)
     else:  # list
         assert isinstance(defining_term_dict, list), "expected list or dictionary with defining terms"
-        emb_defining_attr = np.asarray([word_phrase_emb_dict[term] for term in defining_term_dict])
+        emb_defining_attr = np.asarray([word_phrase_emb_dict[term] for term in defining_term_dict], dtype=np.float32)
     return emb_defining_attr
 

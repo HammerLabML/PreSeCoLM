@@ -360,7 +360,7 @@ def run(config):
     # language models
     openai_models = config["openai_models"]
     huggingface_models = config["huggingface_models"]
-    model_names = huggingface_models + openai_models
+    model_names = openai_models + huggingface_models
 
     # dictionary with batch sizes for huggingface models
     with open(config["batch_size_lookup"], 'r') as f:
