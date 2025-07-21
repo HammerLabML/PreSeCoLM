@@ -11,7 +11,7 @@ import itertools
 import getopt
 import numpy as np
 import torch
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score, precision_score, recall_score, precision_recall_curve, auc
 from sklearn.model_selection import train_test_split
 from datetime import datetime
 from embedding import BertHuggingface
@@ -98,15 +98,20 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np
     # compute Pearson correlation for each group concept
     corrs = []
     pvalues = []
+    aucs = []
     for gid, group in enumerate(groups_names):
         r, p = scipy.stats.pearsonr(concepts[:, gid], g_test[:, gid])
+        precision, recall, thresh = precision_recall_curve(g_test[:, gid], concepts[:, gid])
+        aucs.append(auc(recall, precision))
         corrs.append(r)
         pvalues.append(p)
+
+    print("PR-AUC: ", aucs)
 
     cbm.to_cpu()
     del cbm
 
-    return f1, prec, rec, corrs, pvalues, pred, concepts, epochs
+    return f1, prec, rec, corrs, pvalues, aucs, pred, concepts, epochs
 
 
 def eval_cv(dataset: data_loader.CustomDataset, group_names: list, clf_class: torch.nn.Module,
@@ -116,6 +121,7 @@ def eval_cv(dataset: data_loader.CustomDataset, group_names: list, clf_class: to
     recalls = []
     rvalues = []
     pvalues = []
+    aucs = []
     all_predictions = []
     all_concepts = []
     epochs = []
@@ -128,8 +134,8 @@ def eval_cv(dataset: data_loader.CustomDataset, group_names: list, clf_class: to
         g_test, _, _ = utils.filter_group_labels(dataset.group_names, group_names, g_test)
         emb_train, emb_val, y_train, y_val, g_train, g_val = train_test_split(emb_train, y_train, g_train, test_size=0.1)
 
-        cur_f1, cur_prec, cur_rec, cur_corrs, cur_pval, \
-            predictions, concepts, ep = train_eval_one_split(emb_train, y_train, g_train, emb_val, y_val, g_val,
+        (cur_f1, cur_prec, cur_rec, cur_corrs, cur_pval, cur_auc,
+         predictions, concepts, ep) = train_eval_one_split(emb_train, y_train, g_train, emb_val, y_val, g_val,
                                                              emb_test, y_test, g_test, group_names, clf_class,
                                                              cur_clf_params, cur_wrapper_params, cw, gw,
                                                              max_epochs, dataset.multi_label)
@@ -138,6 +144,7 @@ def eval_cv(dataset: data_loader.CustomDataset, group_names: list, clf_class: to
         recalls.append(cur_rec)
         rvalues.append(cur_corrs)
         pvalues.append(cur_pval)
+        aucs.append(cur_auc)
         all_predictions.append(predictions)
         all_concepts.append(concepts)
         epochs.append(ep)
@@ -146,7 +153,7 @@ def eval_cv(dataset: data_loader.CustomDataset, group_names: list, clf_class: to
     ps = np.vstack(pvalues)
 
     return np.mean(f1s), np.mean(precisions), np.mean(recalls), np.mean(corrs, axis=0), np.mean(ps, axis=0), \
-        np.vstack(all_predictions), np.vstack(all_concepts), epochs
+        np.mean(aucs, axis=0), np.vstack(all_predictions), np.vstack(all_concepts), epochs
 
 
 def get_parameter_sets(choices_per_param: dict):
@@ -241,11 +248,11 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
             for wrapper_params in clf_parameter_sets['wrapper']:
                 try:  # salsa might fail
                     if use_cv:
-                        f1, prec, rec, corr, pval, \
+                        f1, prec, rec, corr, pval, aucs, \
                             predictions, concepts, ep = eval_cv(dataset, sel_groups, clf_head_lookup[clf],
                                                                 clf_params, wrapper_params, max_epochs)
                     else:
-                        f1, prec, rec, corr, pval, \
+                        f1, prec, rec, corr, pval, aucs, \
                             predictions, concepts, ep = train_eval_one_split(emb_train, y_train, g_train,
                                                                              emb_dev, y_dev, g_dev,
                                                                              emb_test, y_test, g_test, sel_groups,
@@ -286,6 +293,12 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                 loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
                 emb_dim = dataset.data_preprocessed[dataset.splits[0]].shape[1]
 
+                print(results)
+                print([dataset_name, model_name, model_type, model_architecture, 'cbm',
+                                                   pooling, clf, hidden_size, emb_dim, n_protected_concepts,
+                                                   clf_params['n_concepts_unsup'], wrapper_params['lambda_concept'],
+                                                   optim, wrapper_params['lr'],
+                                                   loss_fct, f1, prec, rec, ep, file_name])
                 # performance results (only one row per dataset and clf/wrapper params
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture, 'cbm',
                                                    pooling, clf, hidden_size, emb_dim, n_protected_concepts,
@@ -301,7 +314,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                                                                          clf_params['n_concepts_unsup'],
                                                                          wrapper_params['lambda_concept'],
                                                                          optim, wrapper_params['lr'], loss_fct,
-                                                                         group, corr[i], pval[i], ep,
+                                                                         group, corr[i], pval[i], aucs[i], ep,
                                                                          file_name]
 
     return results
@@ -341,7 +354,7 @@ def run(config):
     result_concept_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
                            "clf hidden size factor", "emb size", "protected concepts", "other concepts",
                            "lambda", "optimizer", "lr", "loss",
-                           "group", "Pearson R", "pvalue", "Epochs", "concepts"]
+                           "group", "Pearson R", "pvalue", "PR-AUC", "Epochs", "concepts"]
 
     results_concept_path = config['results_dir'] + 'cbm_concept_results.csv'
     if os.path.isfile(results_concept_path):

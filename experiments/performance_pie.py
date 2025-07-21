@@ -11,7 +11,7 @@ import itertools
 import getopt
 import numpy as np
 import torch
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score, precision_score, recall_score, precision_recall_curve, auc
 from sklearn.model_selection import train_test_split
 from datetime import datetime
 from embedding import BertHuggingface
@@ -108,6 +108,7 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     # compute Pearson correlation of matching PIE concepts with the test groups
     corrs = []
     pvalues = []
+    aucs = []
     pie_matches = []
     groups_gt = []
     for tid, group in enumerate(groups_test):
@@ -117,17 +118,24 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
             pie_matches.append(pipeline.group_lbl[pid])
             groups_gt.append(group)
             r, p = scipy.stats.pearsonr(concepts[:, pid], g_test[:, tid])
+            precision, recall, thresh = precision_recall_curve(g_test[:, tid], concepts[:, pid])
             corrs.append(r)
             pvalues.append(p)
+            aucs.append(auc(recall, precision))
 
     clf.to_cpu()
     del clf
+
+    print(groups_gt)
+    print("PR-AUC:", aucs)
+
 
     # return only the protected concepts
     n_protected_concepts = len(pipeline.group_lbl)
     concepts_ret = concepts[:, :n_protected_concepts]
 
-    return f1, prec, rec, corrs, pvalues, pie_matches, groups_gt, pred, concepts_ret, epochs
+
+    return f1, prec, rec, corrs, pvalues, aucs, pipeline.group_lbl, pie_matches, groups_gt, pred, concepts_ret, epochs
 
 
 def eval_cv(dataset: data_loader.CustomDataset, emb_def_attr: np.ndarray, g_def: np.ndarray,
@@ -138,10 +146,13 @@ def eval_cv(dataset: data_loader.CustomDataset, emb_def_attr: np.ndarray, g_def:
     recalls = []
     rvalues = []
     pvalues = []
+    aucs = []
+    pie_label = []
     all_predictions = []
     all_concepts = []
     epochs = []
     pie_matches = []
+    groups_gt = []
     for fold_id in range(dataset.n_folds):
         data_dict = dataset.get_cv_split(fold_id)
         X_train, emb_train, y_train, g_train, cw, gw = data_dict['train']
@@ -151,8 +162,8 @@ def eval_cv(dataset: data_loader.CustomDataset, emb_def_attr: np.ndarray, g_def:
         g_train, groups, _ = utils.filter_group_labels(dataset.group_names, groups_test, g_train)
         g_test, _, _ = utils.filter_group_labels(dataset.group_names, groups_test, g_test)
 
-        cur_f1, cur_prec, cur_rec, cur_corrs, cur_pval, pie_matches, groups_gt, \
-            predictions, concepts, ep = train_eval_one_split(emb_train, y_train, emb_val, y_val, emb_test, y_test,
+        (cur_f1, cur_prec, cur_rec, cur_corrs, cur_pval, cur_auc, pie_label,
+         pie_matches, groups_gt, predictions, concepts, ep) = train_eval_one_split(emb_train, y_train, emb_val, y_val, emb_test, y_test,
                                                              g_test, emb_def_attr, g_def, group_match_lookup,
                                                              groups_test, groups_pie, attr_lbl, clf_class,
                                                              cur_clf_params, cur_wrapper_params, cw, max_epochs,
@@ -162,6 +173,7 @@ def eval_cv(dataset: data_loader.CustomDataset, emb_def_attr: np.ndarray, g_def:
         recalls.append(cur_rec)
         rvalues.append(cur_corrs)
         pvalues.append(cur_pval)
+        aucs.append(cur_auc)
         all_predictions.append(predictions)
         all_concepts.append(concepts)
         epochs.append(ep)
@@ -170,7 +182,7 @@ def eval_cv(dataset: data_loader.CustomDataset, emb_def_attr: np.ndarray, g_def:
     ps = np.vstack(pvalues)
 
     return np.mean(f1s), np.mean(precisions), np.mean(recalls), np.mean(corrs, axis=0), np.mean(ps, axis=0), \
-        pie_matches, groups_gt, np.vstack(all_predictions), np.vstack(all_concepts), epochs
+        np.mean(aucs, axis=0), pie_label, pie_matches, groups_gt, np.vstack(all_predictions), np.vstack(all_concepts), epochs
 
 
 def get_parameter_sets(choices_per_param: dict):
@@ -284,12 +296,12 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
 
                 try:  # salsa might fail
                     if use_cv:
-                        f1, prec, rec, corr, pval, sel_groups_pie, groups_gt, \
+                        f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
                             predictions, concepts, ep = eval_cv(dataset, emb_def_attr, g_def, group_match_lookup,
                                                                 sel_groups, groups_pie, attr_lbl, clf_head_lookup[clf],
                                                                 clf_params, wrapper_params, max_epochs)
                     else:
-                        f1, prec, rec, corr, pval, sel_groups_pie, groups_gt, \
+                        f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
                             predictions, concepts, ep = train_eval_one_split(emb_train, y_train, emb_dev, y_dev,
                                                                              emb_test, y_test, g_test, emb_def_attr,
                                                                              g_def, group_match_lookup, sel_groups,
@@ -299,7 +311,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                                                                              dataset.multi_label)
 
                     # save predictions (for CV concatenate all predictions):
-                    save_dict = {'predictions': predictions, 'concepts': concepts, 'groups_pie': sel_groups_pie}
+                    save_dict = {'predictions': predictions, 'concepts': concepts, 'groups_pie': pie_label}
                     file_name = create_pred_savefile_name(pred_dir)
                     with open(file_name, "wb") as handle:
                         pickle.dump(save_dict, handle)
@@ -349,8 +361,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                                                                          wrapper_params['method_unsup'],
                                                                          wrapper_params['remove_protected_features'],
                                                                          optim, wrapper_params['lr'], loss_fct,
-                                                                         group_pie, group_test, corr[i], pval[i], ep,
-                                                                         file_name]
+                                                                         group_pie, group_test, corr[i], pval[i],
+                                                                         aucs[i], ep, file_name]
 
     return results
 
@@ -395,8 +407,8 @@ def run(config):
     result_concept_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
                            "clf hidden size factor", "emb size", "protected concepts", "other concepts",
                            "method protected", "method unsupervised", "remove protected",
-                           "optimizer", "lr", "loss",
-                           "group (pie)", "group (test)", "Pearson R", "pvalue", "Epochs", "concepts"]
+                           "optimizer", "lr", "loss", "group (pie)", "group (test)",
+                           "Pearson R", "pvalue", "PR-AUC", "Epochs", "concepts"]
 
     results_concept_path = config['results_dir'] + 'pie_concept_results.csv'
     if os.path.isfile(results_concept_path):
