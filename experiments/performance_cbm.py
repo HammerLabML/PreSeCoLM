@@ -293,12 +293,6 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                 loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
                 emb_dim = dataset.data_preprocessed[dataset.splits[0]].shape[1]
 
-                print(results)
-                print([dataset_name, model_name, model_type, model_architecture, 'cbm',
-                                                   pooling, clf, hidden_size, emb_dim, n_protected_concepts,
-                                                   clf_params['n_concepts_unsup'], wrapper_params['lambda_concept'],
-                                                   optim, wrapper_params['lr'],
-                                                   loss_fct, f1, prec, rec, ep, file_name])
                 # performance results (only one row per dataset and clf/wrapper params
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture, 'cbm',
                                                    pooling, clf, hidden_size, emb_dim, n_protected_concepts,
