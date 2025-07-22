@@ -116,12 +116,12 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
         for match in matches:
             pid = group_ids_pipeline[match]
             pie_matches.append(pipeline.group_lbl[pid])
-            groups_gt.append(group)
             r, p = scipy.stats.pearsonr(concepts[:, pid], g_test[:, tid])
             precision, recall, thresh = precision_recall_curve(g_test[:, tid], concepts[:, pid])
             corrs.append(r)
             pvalues.append(p)
             aucs.append(auc(recall, precision))
+            groups_gt.append(group)
 
     clf.to_cpu()
     del clf
@@ -129,11 +129,9 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     print(groups_gt)
     print("PR-AUC:", aucs)
 
-
     # return only the protected concepts
     n_protected_concepts = len(pipeline.group_lbl)
     concepts_ret = concepts[:, :n_protected_concepts]
-
 
     return f1, prec, rec, corrs, pvalues, aucs, pipeline.group_lbl, pie_matches, groups_gt, pred, concepts_ret, epochs
 

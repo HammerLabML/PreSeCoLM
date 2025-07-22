@@ -37,7 +37,8 @@
     {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
     {"name": "crows_pairs", "local_dir": null},
     {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},
-    {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"}
+    {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"},
+    {"name": "stereoset", "local_dir": null}
   ],
   "classifier": {
     "linear": {
