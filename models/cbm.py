@@ -201,10 +201,13 @@ class CBMWrapper():
             for batch in loop:
                 self.optimizer.zero_grad()
 
+                batch_x = batch[0]
+                batch_y = batch[1]
+                batch_c = batch[2]
                 if torch.cuda.is_available():
-                    batch_x = batch[0].to('cuda')
-                    batch_y = batch[1].to('cuda')
-                    batch_c = batch[2].to('cuda')
+                    batch_x = batch_x.to('cuda')
+                    batch_y = batch_y.to('cuda')
+                    batch_c = batch_c.to('cuda')
 
                 def closure(backwards=False):
                     out = self.model.forward(batch_x)
@@ -253,8 +256,9 @@ class CBMWrapper():
             loop = loader
 
         for batch in loop:
+            batch_x = batch[0]
             if torch.cuda.is_available():
-                batch_x = batch[0].to('cuda')
+                batch_x = batch_x.to('cuda')
 
             out = self.model.forward(batch_x)
             pred = out[0]

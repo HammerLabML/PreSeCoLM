@@ -3,7 +3,6 @@ import sys
 import json
 import pickle
 import pandas as pd
-import yaml
 import scipy
 
 import functools
@@ -24,7 +23,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import data_loader
 import models
-import plotting
 import utils
 
 
@@ -409,11 +407,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hc:", ["config="])
     except getopt.GetoptError:
-        print('performance_baseline.py -c <config>')
+        print('performance_cbm.py -c <config>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('performance_baseline.py -c <config>')
+            print('performance_cbm.py -c <config>')
             sys.exit()
         elif opt in ("-c", "--config"):
             config_path = arg

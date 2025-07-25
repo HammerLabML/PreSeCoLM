@@ -467,11 +467,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hc:", ["config="])
     except getopt.GetoptError:
-        print('performance_baseline.py -c <config>')
+        print('performance_pie.py -c <config>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('performance_baseline.py -c <config>')
+            print('performance_pie.py -c <config>')
             sys.exit()
         elif opt in ("-c", "--config"):
             config_path = arg
