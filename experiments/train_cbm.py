@@ -84,7 +84,12 @@ def train_model(emb_train: np.ndarray, y_train: np.ndarray, g_train: np.ndarray,
     n_concepts = clf_params['n_concepts_protec'] + clf_params['n_concepts_unsup']
     clf_params['input_size'] = emb_train.shape[1]
 
-    clf_class = wrapper_params['clf']
+    wrapper_params['optimizer'] = optimizer_lookup[wrapper_params['optimizer']]
+    if multi_label:
+        wrapper_params['criterion'] = criterion_lookup[wrapper_params['criterion']['multi-label']]
+    else:
+        wrapper_params['criterion'] = criterion_lookup[wrapper_params['criterion']['single-label']]
+    clf_class = clf_head_lookup[wrapper_params['clf']]
     wrapper_params.pop('clf', None)
 
     if 'hidden_size_factor' in cur_clf_params.keys():
@@ -160,14 +165,6 @@ def training_wrapper(checkpoint_dir: pd.DataFrame, dataset_name: str, model_name
     if clf_parameters['n_concepts_unsup'] == -1:
         clf_parameters['n_concepts_unsup'] = emb_dim - clf_parameters['n_concepts_protec']
     n_concepts = clf_parameters['n_concepts_protec'] + clf_parameters['n_concepts_unsup']
-
-    print(wrapper_parameters)
-    wrapper_parameters['clf'] = clf_head_lookup[wrapper_parameters['clf']]
-    wrapper_parameters['optimizer'] = optimizer_lookup[wrapper_parameters['optimizer']]
-    if dataset.multi_label:
-        wrapper_parameters['criterion'] = criterion_lookup[wrapper_parameters['criterion']['multi-label']]
-    else:
-        wrapper_parameters['criterion'] = criterion_lookup[wrapper_parameters['criterion']['single-label']]
 
     print("clf parameters:")
     print(clf_parameters)
