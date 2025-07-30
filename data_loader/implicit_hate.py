@@ -1,17 +1,28 @@
 import os
 import pandas as pd
-from datasets import Dataset
+from datasets import Dataset as HFDataset
+from .dataset import Dataset 
 
-class ImplicitHateDataset:
-    def __init__(self, local_dir="data"):
-        path_to_tsv = os.path.join(local_dir, "implicit_mergedMinority_class_and_implicit_class_lookup_post1.tsv")
-        self.data = pd.read_csv(path_to_tsv, sep="\t").dropna(subset=["post", "mergedMinority", "implicit_class"])
-    
+class ImplicitHateDataset(Dataset): 
+    def __init__(self, data_path, split="all"):
+        super().__init__(data_path, split)
+        self.dataset_name = "implicit_hate"
+        self.text_column = "post"
+        self.label_column = "implicit_class"
+        self.group_column = "mergedMinority"
+        self.df = self.load_dataset()
+
+    def load_dataset(self):
+        file_path = os.path.join(self.data_path, "implicit_mergedMinority_class_and_implicit_class_lookup_post1.tsv")
+        df = pd.read_csv(file_path, sep="\t")
+        df = df.dropna(subset=[self.text_column, self.label_column, self.group_column])
+        return df
+
     def to_hf_dataset(self):
-        return Dataset.from_pandas(
-            self.data[["post", "mergedMinority", "implicit_class"]].rename(columns={
-                "post": "text",
-                "mergedMinority": "protected_label",
-                "implicit_class": "class_label"
+        return HFDataset.from_pandas(
+            self.df[[self.text_column, self.label_column, self.group_column]].rename(columns={
+                self.text_column: "text",
+                self.label_column: "class_label",
+                self.group_column: "protected_label"
             })
         )
