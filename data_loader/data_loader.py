@@ -29,7 +29,7 @@ def get_dataset(dataset_name, local_dir=None):
         dataset = SBICDataset(local_dir=local_dir)
     # TODO Implicit Hate
     elif dataset_name == 'implicit_hate':
-        dataset = ImplicitHateDataset(local_dir=local_dir)
+        dataset = ImplicitHateDataset(local_dir)
         return dataset, None, None, None, None, None, None, None
 
 
