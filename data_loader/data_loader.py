@@ -30,6 +30,8 @@ def get_dataset(dataset_name, local_dir=None):
     # TODO Implicit Hate
     elif dataset_name == 'implicit_hate':
         dataset = ImplicitHateDataset(local_dir=local_dir)
+        return dataset, None, None, None, None, None, None, None
+
 
     else:
         print("dataset %s not supported yet" % dataset_name)
