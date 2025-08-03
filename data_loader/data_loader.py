@@ -4,6 +4,7 @@ from .crowspairs import CrowSPairs
 from .jigsaw import JigsawBias
 from .twitter_aae import TwitterAAE
 from .sbic import SBICDataset
+from .implicit_hate import ImplicitHateDataset
 
 
 def get_dataset(dataset_name, local_dir=None):
@@ -26,11 +27,8 @@ def get_dataset(dataset_name, local_dir=None):
     elif dataset_name == 'sbic':
         dataset = SBICDataset(local_dir=local_dir)
     # TODO Implicit Hate
-    elif dataset_name == "implicit_hate":
-        from .implicit_hate import ImplicitHateDataset
-        dataset = ImplicitHateDataset(local_dir)
-        return dataset, None, None, None, None, None, None, None
-
+    elif dataset_name == 'implicit_hate':
+        dataset = ImplicitHateDataset(local_dir=local_dir)
 
     else:
         print("dataset %s not supported yet" % dataset_name)
