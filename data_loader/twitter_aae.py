@@ -1,6 +1,7 @@
 from .dataset import CustomDataset, label2onehot
 from datasets import load_dataset
 import numpy as np
+from sklearn.utils import shuffle
 
 
 class TwitterAAE(CustomDataset):
@@ -18,12 +19,19 @@ class TwitterAAE(CustomDataset):
         self.prepare()
 
     def load(self, local_dir=None):
-        ds_aa = load_dataset('lighteval/TwitterAAE', 'aa')
-        ds_white = load_dataset('lighteval/TwitterAAE', 'white')
+        # ds_aa = load_dataset('lighteval/TwitterAAE', 'aa')
+        # ds_white = load_dataset('lighteval/TwitterAAE', 'white')
+
+        # dataset changed, assuming its sorted
+        ds = load_dataset('lighteval/TwitterAAE')
 
         # test set only, no labels
         n_per_group = 50000
-        self.data['test'] = ds_aa['test']['tweet'] + ds_white['test']['tweet']
-        self.labels['test'] = - np.ones((2*n_per_group, 1))
+        self.data['test'] = ds['test']['tweet']
+        # self.data['test'] = ds_aa['test']['tweet'] + ds_white['test']['tweet']
+        self.labels['test'] = - np.ones((2*n_per_group, 1), dtype=int)
         self.protected_groups['test'] = label2onehot([0 for i in range(n_per_group)] + [1 for i in range(n_per_group)])
 
+        self.data['test'], self.protected_groups['test'] = shuffle(self.data['test'],
+                                                                   self.protected_groups['test'],
+                                                                   random_state=0)
