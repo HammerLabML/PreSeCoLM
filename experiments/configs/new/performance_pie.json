@@ -34,6 +34,7 @@
   "plot_dir": "experiments/plots/performance/",
   "max_epochs": 50,
   "datasets": [
+    {"name": "twitterAAE", "local_dir": null},
     {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
     {"name": "crows_pairs", "local_dir": null},
     {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},

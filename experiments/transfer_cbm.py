@@ -7,6 +7,7 @@ import scipy
 
 import functools
 import itertools
+import yaml
 import getopt
 import numpy as np
 import torch
@@ -153,56 +154,63 @@ def train_model(emb_train: np.ndarray, y_train: np.ndarray, g_train: np.ndarray,
     del cbm
 
 
-def training_wrapper(checkpoint_dir: pd.DataFrame, dataset_name: str, model_name: str, pooling: str,
-                         batch_size: int, emb_dir: str, clf_parameters: dict, wrapper_parameters: dict,
-                         max_epochs: int, emb_dim: int, local_dir: str = None):
+def get_standardized_label(label_match: dict, label: str):
+    for attr, label_dict in label_match.items():
+        for standard_lbl, labels in label_dict.items():
+            if label in labels:
+                return standard_lbl
+
+
+def evaluate_cbm(cbmWrapper: models.CBMWrapper, dataset_train: str, dataset_test: str, model_name: str,
+                 pooling: str, batch_size: int, emb_dir: str, train_groups: list, label_matches: dict,
+                 local_dir: str = None):
     """
     For one dataset and Backbone (model name + pooling) run the evaluation for all clf architecture and parameter
     choices.
     """
-    dataset = utils.get_dataset_with_embeddings(emb_dir, dataset_name, model_name, pooling, batch_size, local_dir)
-    sel_groups = dataset.group_names
-    n_protected_concepts = len(sel_groups)
-    print(sel_groups)
-    print("train CBM for dataset %s, multi_label=%i" % (dataset_name, dataset.multi_label))
+    dataset = utils.get_dataset_with_embeddings(emb_dir, dataset_test, model_name, pooling, batch_size, local_dir)
+    print("evaluate CBM trained on %s on %s" % (dataset_train, dataset_test))
 
-    # we apply CV for (small) datasets that do not provide a train-test split
-    use_cv = (len(dataset.splits) == 1)
+    if len(dataset.splits) == 1:
+        _, emb_test, y_test, g_test, _, _ = dataset.get_split(dataset.splits[0])
+        #g_test, groups, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
-    # set clf and wrapper parameters according to config
-    print(clf_parameters)
-    clf_parameters['n_concepts_protec'] = n_protected_concepts
-    clf_parameters['output_size'] = dataset.n_classes
-    if clf_parameters['n_concepts_unsup'] == -1:
-        clf_parameters['n_concepts_unsup'] = emb_dim - clf_parameters['n_concepts_protec']
-    n_concepts = clf_parameters['n_concepts_protec'] + clf_parameters['n_concepts_unsup']
-
-    print("clf parameters:")
-    print(clf_parameters)
-
-    assert n_concepts <= emb_dim
-
-    checkpoint_file, params_file = get_cbm_savefile(checkpoint_dir, dataset_name, model_name, pooling, file_suffix=None)
-
-    if use_cv:
-        _, emb_train, y_train, g_train, cw, gw = dataset.get_split(dataset.splits[0])
-        g_train, groups, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
-        emb_train, emb_dev, y_train, y_dev, g_train, g_dev = train_test_split(emb_train, y_train, g_train,
-                                                                              test_size=0.1)
-        # workaround for small datasets; use as much training data as possible, bc these are used in the transfer
-        # experiment (testing will be done on another dataset)
-        emb_test, y_test, g_test = emb_train, y_train, g_train
     else:
-        _, emb_train, y_train, g_train, cw, gw = dataset.get_split('train')
-        _, emb_dev, y_dev, g_dev, _, _ = dataset.get_split('dev')
         _, emb_test, y_test, g_test, _, _ = dataset.get_split('test')
-        g_train, groups, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
-        g_dev, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_dev)
-        g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
+        #g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
-    train_model(emb_train, y_train, g_train, emb_dev, y_dev, g_dev, emb_test, y_test, g_test,
-                checkpoint_file, params_file, clf_parameters, wrapper_parameters,
-                cw, gw, max_epochs, dataset.multi_label)
+    # standardize dataset-specific group label and find shared label indices
+    eval_groups_s = [get_standardized_label(label_matches, lbl) for lbl in dataset.group_names]
+    train_groups_s = [get_standardized_label(label_matches, lbl) for lbl in train_groups]
+    shared_lbl = [lbl for lbl in eval_groups_s if lbl in train_groups_s and lbl is not None]
+    if len(shared_lbl) == 0:
+        print("datasets %s and %s do not share any labels" % (dataset_train, dataset_test))
+        return [], [], [], [], []
+
+    if None in shared_lbl or 'None' in shared_lbl:
+        print(shared_lbl)
+        exit(0)
+
+    eval_ids = [eval_groups_s.index(lbl) for lbl in shared_lbl]
+    train_ids = [train_groups_s.index(lbl) for lbl in shared_lbl]
+
+    # apply CBM to eval data
+    pred, concepts = cbmWrapper.predict(emb_test)
+
+    # evaluate concept alignment
+    rs = []
+    ps = []
+    aucs = []
+    for i in range(len(eval_ids)):
+        cbm_idx = train_ids[i]
+        eval_idx = eval_ids[i]
+        r, p = scipy.stats.pearsonr(g_test[:, eval_idx], concepts[:, cbm_idx])
+        precision, recall, thresh = precision_recall_curve(g_test[:, eval_idx], concepts[:, cbm_idx])
+        rs.append(r)
+        ps.append(p)
+        aucs.append(auc(recall, precision))
+
+    return rs, ps, aucs, [dataset.group_names[idx] for idx in eval_ids], [train_groups[idx] for idx in train_ids]
 
 
 def run(config):
@@ -215,9 +223,24 @@ def run(config):
     with open(config["batch_size_lookup"], 'r') as f:
         batch_size_lookup = json.load(f)
 
-    # predictions are saved for later, make sure the directory exists
-    if not os.path.isdir(config["checkpoint_dir"]):
-        os.makedirs(config["checkpoint_dir"])
+    # make sure the directory for results exists
+    if not os.path.isdir(config['results_dir']):
+        os.makedirs(config['results_dir'])
+
+    with open(config['label_match_config'], 'r') as ff:
+        label_match_config = yaml.safe_load(ff)
+
+    # results for performance
+    result_keys = ["dataset (train)", "dataset (test)", "model", "model type", "architecture",
+                   "method", "pooling", "classifier", "clf hidden size factor",
+                   "emb size", "protected concepts", "other concepts",
+                   "lambda", "optimizer", "lr", "loss", "group (train)", "group (test)",
+                   "Pearson R", "pvalue", "PR-AUC"]
+    results_path = config['results_dir'] + 'cbm_transfer_results.csv'
+    if os.path.isfile(results_path):
+        results = pd.read_csv(results_path)
+    else:
+        results = pd.DataFrame({key: [] for key in result_keys})
 
     # evaluate baseline classifier performance on different LMs, pooling choices, datasets
     for model in model_names:
@@ -239,6 +262,7 @@ def run(config):
         # set batch size and pooling choices
         pooling_choices = config["pooling"]
         batch_size = 1
+        model_type, model_architecture = utils.get_model_type_architecture(model)
         if model in batch_size_lookup.keys():
             batch_size = batch_size_lookup[model]
         if model in openai_models:
@@ -246,9 +270,64 @@ def run(config):
 
         for pool in pooling_choices:
             for dataset_setup in config['datasets']:
-                training_wrapper(config['checkpoint_dir'], dataset_setup['name'], model, pool, batch_size,
-                                 config['embedding_dir'], config['classifier'], config['wrapper'],
-                                 config['max_epochs'], lm_emb_size, local_dir=dataset_setup['local_dir'])
+                train_dataset = dataset_setup['name']
+                checkpoint_file, params_file = get_cbm_savefile(config['checkpoint_dir'], train_dataset, model, pool,
+                                                                file_suffix=None)
+                if not os.path.isfile(checkpoint_file) and os.path.isfile(params_file):
+                    print("checkpoint and/ or parameter file not found: %s, %s" % (checkpoint_file, params_file))
+                    print("skip %s as training dataset" % train_dataset)
+                    continue
+
+                # load the pre-trained CBM
+                with open(params_file, "rb") as handle:
+                    model_params = pickle.load(handle)
+                hidden_size = model_params['clf']['hidden_size'] if 'hidden_size' in model_params['clf'].keys() else -1
+
+                cbm = models.CBM(**model_params['clf'])
+                cbm.load_state_dict(torch.load(checkpoint_file, weights_only=True))
+                cbmWrapper = models.CBMWrapper(cbm, **model_params['wrapper'])
+
+                dataset = data_loader.get_dataset(train_dataset, dataset_setup['local_dir'])
+
+                for eval_setup in config['datasets']:
+                    eval_dataset = eval_setup['name']
+
+                    # only cross-dataset transfer
+                    # (except twitterAAE which is not in the performance experiment)
+                    if eval_dataset == train_dataset and not eval_dataset == 'twitterAAE':
+                        continue
+
+                    # check if results exist
+                    if pool == '':
+                        cur_params_per_key = {'dataset (train)': train_dataset, 'dataset (test)': eval_dataset,
+                                              'model': model}
+                    else:
+                        cur_params_per_key = {'dataset (train)': train_dataset, 'dataset (test)': eval_dataset,
+                                              'model': model, 'pooling': pool}
+                    result_filter = functools.reduce(lambda a, b: a & b, [(results[key] == val)
+                                                                          for key, val in cur_params_per_key.items()])
+                    if results.loc[result_filter].empty:
+                        # run eval
+                        (rs, ps, aucs,
+                         eval_groups, train_groups) = evaluate_cbm(cbmWrapper, train_dataset, eval_dataset, model,
+                                                                   pool, batch_size, config['embedding_dir'],
+                                                                   dataset.group_names, label_match_config,
+                                                                   eval_setup['local_dir'])
+                        # save results
+                        for i in range(len(rs)):
+                            results.loc[len(results.index)] = [train_dataset, eval_dataset, model, model_type,
+                                                               model_architecture, 'cbm', pool,
+                                                               config['wrapper']['clf'], hidden_size, lm_emb_size,
+                                                               model_params['clf']['n_concepts_protec'],
+                                                               model_params['clf']['n_concepts_unsup'],
+                                                               model_params['wrapper']['lambda_concept'],
+                                                               model_params['wrapper']['optimizer'],
+                                                               model_params['wrapper']['lr'],
+                                                               model_params['wrapper']['criterion'], train_groups[i],
+                                                               eval_groups[i], rs[i], ps[i], aucs[i]]
+
+                        print("save results")
+                        results.to_csv(results_path, index=False)
 
 
 def main(argv):
@@ -256,11 +335,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hc:", ["config="])
     except getopt.GetoptError:
-        print('train_cbm.py -c <config>')
+        print('transfer_cbm.py -c <config>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('train_cbm.py -c <config>')
+            print('transfer_cbm.py -c <config>')
             sys.exit()
         elif opt in ("-c", "--config"):
             config_path = arg

@@ -2,18 +2,21 @@
   "huggingface_models": [
   ],
   "openai_models": [
-    "text-embedding-3-small"
+    "text-embedding-3-small",
+    "text-embedding-3-large"
   ],
   "pooling": [
     "mean"
   ],
   "embedding_dir": "../../artifacts/embeddings/",
   "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
+  "label_match_config": "experiments/configs/concept_transfer/label_matches.yaml",
   "results_dir": "experiments/results/transfer/",
   "checkpoint_dir": "../../artifacts/cbm_models/",
   "plot_dir": "experiments/plots/performance/",
   "max_epochs": 50,
   "datasets": [
+    {"name": "twitterAAE", "local_dir": null},
     {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"},
     {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
     {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},
