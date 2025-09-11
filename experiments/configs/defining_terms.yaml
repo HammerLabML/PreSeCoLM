@@ -1,0 +1,632 @@
+defining_terms:
+  dialect:
+    neutral:
+    - she is always working
+    - he doesn't have any
+    - i am about to go to the store
+    - she is my sister
+    - they were at the party
+    - we have finished our homework
+    - you are always joking around
+    - i haven't seen him today
+    - it doesn't matter
+    - she got her hair done
+    - she has known him for a long time
+    - that's my brother's car
+    - yesterday, he walked to the store
+    - i don't know anything
+    - he will be going to the store tomorrow
+    - he told me the story
+    - are you all coming to the party
+    - she runs fast
+    - there are a lot of people here
+    aae:
+    - she be workin' all the time
+    - he ain't got none
+    - i'm finna go to the store
+    - she my sister
+    - they was at the party
+    - we done finished our homework
+    - you stay playin' too much
+    - i ain't seen him today
+    - it don't matter
+    - she got her hair did
+    - she been knowing him
+    - that my brother car
+    - yesterday, he walk to the store
+    - i don't know nothing
+    - he be going to the store tomorrow
+    - he tol' me the story
+    - y'all coming to the party
+    - she run fast
+    - it's a lot of people here
+  disablity:
+    neutral:
+      - a person
+      - someone with
+      - a person
+      - that person is
+      - that person has
+      - they have
+      - they have some
+      - people with
+      - people with
+      - they have
+      - they are
+      - people with
+      - people with
+      - people
+      - people
+      - peole with
+      - peole with
+      - peole with
+      - peole with
+      - that person has
+      - people
+      - people
+      - peole with
+      - peole with
+      - peole with
+      - people
+      - drivers
+      - people
+      - wheelchair drivers
+      - wheelchair drivers
+    disability:
+      - an autistic person
+      - someone with adhd
+      - a dyslexic person
+      - that person is non-verbal
+      - that person has down syndrome
+      - they have tourette
+      - they have some intellectual disability
+      - people with learning disabilities
+      - people with developmental disabilities
+      - they have ocd
+      - they are blind
+      - people with vision impairments
+      - people with glasses
+      - deaf people
+      - mute people
+      - people with hearing impairments
+      - people with hearing aids
+      - people with motor impairments
+      - people with speech impairment
+      - that person has cerebral palsy
+      - amputees
+      - paralyzed people
+      - people with muscular dystrophy
+      - people with cfs
+      - people with chronic fatigue syndrome
+      - diabetics
+      - wheelchair drivers
+      - wheelchair drivers
+      - people with mobility aids
+      - people with prosthetic
+  ethnicity:
+    neutral:
+    - people
+    - people
+    - american
+    - american
+    - a person
+    - someone
+    - the person is
+    white:
+    - white people
+    - whites
+    - white american
+    - caucasian american
+    - a caucasian
+    - some caucasian
+    - the person is white
+    black:
+    - black people
+    - blacks
+    - african american
+    - afro american
+    - an african
+    - some african
+    - the person is black
+    asian:
+    - asian people
+    - asians
+    - asian american
+    - asian american
+    - an asian
+    - some asian
+    - the person is asian
+    latino/hispanic:
+    - hispanic people
+    - hispanics
+    - latin-american
+    - hispano-american
+    - a latino
+    - some latino
+    - the person is hispanic
+  ethnicity2:
+    neutral:
+    - people
+    - people
+    - a person
+    - someone
+    - the person is
+    white:
+    - white people
+    - whites
+    - a white person
+    - some white person
+    - the person is white
+    black:
+    - black people
+    - blacks
+    - a black person
+    - some black person
+    - the person is black
+    asian:
+    - asian people
+    - asians
+    - an asian
+    - some asian
+    - the person is asian
+    hispanic:
+    - hispanic people
+    - hispanics
+    - a hispanic
+    - some hispanic
+    - the person is hispanic
+    latino:
+    - latin-americans
+    - latinos
+    - a latino
+    - some latino
+    - the person is latino
+    middle eastern:
+    - middle eastern people
+    - middle easterners
+    - a middle easterner
+    - some middle easterner
+    - the person is middle eastern
+    african:
+    - african people
+    - africans
+    - an african
+    - some african
+    - the person is african
+    european:
+    - european people
+    - europeans
+    - a european
+    - some european
+    - the person is european
+  gender:
+    neutral:
+    - a person
+    - people
+    - those people
+    - that person
+    - they
+    - their
+    - them
+    - theirs
+    - themselves
+    - parent
+    - child
+    - sibling
+    female:
+    - a woman
+    - women
+    - those women
+    - that woman
+    - she
+    - her
+    - her
+    - hers
+    - herself
+    - mother
+    - daughter
+    - sister
+    male:
+    - a man
+    - men
+    - those men
+    - that man
+    - he
+    - his
+    - him
+    - his
+    - himself
+    - father
+    - son
+    - brother
+  lgbtq:
+    neutral:
+    - they are
+    - being
+    - being
+    - being
+    - being
+    - being
+    - is
+    - is
+    - is
+    - is
+    - is
+    - is
+    - is
+    - is
+    - is
+    - they are
+    - people
+    - they are
+    lgbtq:
+    - they are trans
+    - being transgender
+    - being homosexual
+    - being asexual
+    - being bisexual
+    - being pansexual
+    - is genderqueer
+    - is nonbinary
+    - is intersex
+    - is intergender
+    - is genderfluid
+    - is agender
+    - is gay
+    - is lesbian
+    - is lgbtq+
+    - they are lgbtq
+    - lgbtqia people
+    - they are queer
+    normative:
+    - they are cis
+    - being cisgender
+    - being heterosexual
+    - being heterosexual
+    - being heterosexual
+    - being heterosexual
+    - has binary gender
+    - has normative gender
+    - has one gender
+    - is endosex
+    - is monogender
+    - has a gender
+    - is straight
+    - is straight
+    - is cis-hetero
+    - they are cis-hetero normative
+    - gender normative people
+    - they are gender normative
+  mental health:
+    neutral:
+    - the person is
+    - the person has
+    - they are
+    - they are
+    - they have
+    - they have
+    - people with
+    - people with
+    - people with
+    - people with
+    - these people are
+    - they are
+    - they are
+    - is a
+    - they have
+    - they are
+    - is
+    - has
+    - that person has
+    - has
+    mental disorder:
+    - the person is autistic
+    - the person has adhd
+    - they are dyslexic
+    - they are non-verbal
+    - they have down syndrome
+    - they have tourette
+    - people with intellectual disabilities
+    - people with learning disabilities
+    - people with developmental disabilities
+    - people with ocd
+    - these people are mentally ill
+    - they are demented
+    - they are insane
+    - is an addict
+    - they have depression
+    - they are schizophrenic
+    - is bipolar
+    - has eating disorder
+    - that person has anxiety
+    - has ptsd
+  race:
+    neutral:
+      - people
+      - people
+      - american
+      - american
+      - a person
+      - someone
+      - the person is
+    white:
+      - white people
+      - whites
+      - white american
+      - caucasian american
+      - a caucasian
+      - some caucasian
+      - the person is white
+    black:
+      - black people
+      - blacks
+      - african american
+      - afro american
+      - an african
+      - some african
+      - the person is black
+    asian:
+      - asian people
+      - asians
+      - asian american
+      - asian american
+      - an asian
+      - some asian
+      - the person is asian
+  religion:
+    neutral:
+    - people
+    - person
+    - people
+    - building
+    - building
+    - book
+    - book
+    - a person
+    - holiday
+    - holiday
+    - people
+    - people
+    christian:
+    - christian people
+    - christian
+    - christians
+    - church
+    - chapel
+    - bible
+    - bible
+    - a christian
+    - christmas
+    - easter
+    - catholic people
+    - lutheran people
+    muslim:
+    - muslim people
+    - muslim
+    - muslims
+    - mosque
+    - masjid
+    - quran
+    - quran
+    - a muslim
+    - ramadan
+    - eid al-adha
+    - muslim people
+    - muslim people
+    jewish:
+    - jewish people
+    - jew
+    - jews
+    - synagogue
+    - synagog
+    - tanakh
+    - hebrew bible
+    - a jew
+    - hanukkah
+    - tisha bav
+    - jewish people
+    - jewish people
+  sexual orientation:
+    bi:
+    - that bi
+    - he is bisexual
+    - she is bisexual
+    - they are bisexual
+    - those bis
+    - bisexual
+    - he is bi
+    - she is bi
+    hetero:
+    - that hetero
+    - he is heterosexual
+    - she is heterosexual
+    - they are heterosexual
+    - those heteros
+    - heterosexual
+    - he is straight
+    - she is straight
+    homo:
+    - that homo
+    - he is homosexual
+    - she is homosexual
+    - they are homosexual
+    - those homos
+    - homosexual
+    - he is gay
+    - she is lesbian
+    neutral:
+    - that person
+    - he is
+    - she is
+    - they are
+    - those people
+    - sexual
+    - he is
+    - she is
+  trans/cis:
+    cis:
+    - she is cis
+    - he is cis
+    - they are cis
+    - they are cisgender
+    neutral:
+    - she is
+    - he is
+    - they are
+    - they are
+    trans:
+    - she is trans
+    - he is trans
+    - they are trans
+    - they are transgender
+group_matching:
+  bios-supervised:
+    female:
+    - female
+    male:
+    - male
+  crows_pairs:
+    asian:
+    - asian
+    bisexual:
+    - bi
+    black:
+    - black
+    christian:
+    - christian
+    female:
+    - female
+    heterosexual:
+    - hetero
+    homosexual:
+    - homo
+    jewish:
+    - jewish
+    male:
+    - male
+    mental disability:
+    - disability
+    - mental disorder
+    mental illness:
+    - mental disorder
+    muslim:
+    - muslim
+    physical disability:
+    - disability
+    white:
+    - white
+  jigsaw:
+    female:
+    - female
+    male:
+    - male
+    transgender:
+    - trans
+    white:
+    - white
+    black:
+    - black
+    asian:
+    - asian
+    latino:
+    - latino
+    - latino/hispanic
+    christian:
+    - christian
+    jewish:
+    - jewish
+    muslim:
+    - muslim
+    heterosexual:
+    - hetero
+    bisexual:
+    - bi
+    homosexual_gay_or_lesbian:
+    - homo
+    intellectual_or_learning_disability:
+    - disability
+    - mental disorder
+    physical_disability:
+    - disability
+    psychiatric_or_mental_illness:
+    - mental disorder
+  sbic:
+    female:
+    - female
+    male:
+    - male
+    trans:
+      - trans
+    lgbtq+:
+      - lgbtq
+    white:
+      - white
+    black:
+      - black
+    asian:
+      - asian
+    latin-american:
+      - latino
+      - latino/hispanic
+    hispanic:
+      - hispanic
+      - latino/hispanic
+    middle eastern:
+      - middle eastern
+    african:
+      - african
+    european:
+      - european
+    christian:
+      - christian
+    jewish:
+      - jewish
+    muslim/islam:
+      - muslim
+    bisexual:
+      - bi
+    homosexual:
+      - homo
+    mental disability:
+      - disability
+      - mental disorder
+    physical disability:
+      - disability
+    mental illness/ disorder:
+      - mental disorder
+    disability:
+      - disability
+  stereoset:
+    african:
+    - african
+    black:
+    - black
+    christian:
+    - christian
+    european:
+    - european
+    female:
+    - female
+    hispanic:
+    - hispanic
+    hispanic/latino:
+    - latino/hispanic
+    jewish:
+    - jewish
+    latin-american:
+    - latino
+    male:
+    - male
+    middle east:
+    - middle eastern
+    - asian
+    muslim:
+    - muslim
+    south east asian:
+    - asian
+    white:
+    - white
+  twitterAAE:
+    aae:
+    - aae
+    - black

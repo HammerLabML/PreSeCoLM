@@ -1,0 +1,27 @@
+gender_sexual_orientation:
+  female: [female]
+  male: [male]
+  trans: [transgender, trans]
+  lgbtq: [lgbtq+]
+  homosexual: [homosexual, homosexual_gay_or_lesbian]
+  heterosexual: [heterosexual]
+  bisexual: [bisexual]
+ethnicity:
+  black: [black, aa]
+  white: [white]
+  asian: [asian]
+  latino: [latino, latin-american, hispanic/latino]
+  hispanic: [hispanic, hispanic/latino]
+  middle_eastern: [middle eastern, middle east]
+  hispanic/latino: [latino, hispanic, latin-american, hispanic/latino]
+  african: [african]
+  european: [european]
+religion:
+  christian: [christian]
+  jewish: [jewish]
+  muslim: [muslim, muslim/islam]
+disability:
+  disability: [disability, mental disability, intellectual_or_learning_disability, physical disability, physical_disability]
+  mental_disorder: [mental illness, mental illness/ disorder, psychiatric_or_mental_illness]
+  mental_disability: [mental disability, intellectual_or_learning_disability]
+  physical_disability: [physical_disability, physical disability]
