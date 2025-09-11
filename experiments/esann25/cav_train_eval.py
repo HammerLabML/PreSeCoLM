@@ -12,13 +12,16 @@ import scipy
 from sklearn.metrics import f1_score
 
 # local imports
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, parent_dir)
+pkg_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "data_loader"))
+pkg_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "models"))
+sys.path.insert(0, pkg_dir)
+import plotting
+import utils
 import data_loader
 import models
 
-import plotting
-import utils
 
 
 def get_cav_savefile(cav_dir, dataset, model, pooling, file_suffix=None):

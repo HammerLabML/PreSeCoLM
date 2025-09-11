@@ -16,12 +16,15 @@ from sklearn.metrics import f1_score
 import torch
 
 # local imports
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-import data_loader
-import models
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, parent_dir)
+pkg_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "data_loader"))
+pkg_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "models"))
+sys.path.insert(0, pkg_dir)
 import plotting
 import utils
+import data_loader
+import models
 
 
 def get_cbm_savefile(cbm_dir, dataset, model, pooling, file_suffix=None):

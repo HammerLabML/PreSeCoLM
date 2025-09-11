@@ -10,11 +10,13 @@ import numpy as np
 import scipy
 
 # local imports
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-import data_loader
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, parent_dir)
+pkg_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "data_loader"))
+sys.path.insert(0, pkg_dir)
 import plotting
 import utils
+import data_loader
 
 NEUTRAL_KEY = 'neutral'
 
