@@ -1,27 +1,10 @@
 {
   "huggingface_models": [
     "bert-base-uncased",
-    "bert-large-uncased",
-    "distilbert-base-uncased",
-    "gpt2",
-    "roberta-base",
-    "roberta-large",
-    "distilroberta-base",
-    "google/electra-large-generator",
-    "google/electra-large-discriminator",
-    "google/electra-base-generator",
-    "google/electra-base-discriminator",
-    "albert-base-v2",
-    "albert-large-v2",
-    "EleutherAI/pythia-160m",
-    "EleutherAI/pythia-410m",
-    "EleutherAI/pythia-1b",
-    "EleutherAI/pythia-1.4b",
     "meta-llama/Llama-3.2-1B"
   ],
   "openai_models": [
-    "text-embedding-3-small",
-    "text-embedding-3-large"
+    "text-embedding-3-small"
   ],
   "pooling": [
     "mean"
@@ -44,16 +27,31 @@
     },
     "MLP2": {
       "hidden_size_factor": [
-        0.6,
-        0.8,
+        0.5,
         1.0
       ]
     },
     "MLP3": {
       "hidden_size_factor": [
-        0.6,
-        0.8,
+        0.5,
         1.0
+      ]
+    },
+    "GMLVQ": {
+      "min_prototypes_per_class": [
+        2,
+        4,
+        6,
+        10,
+        15,
+        20
+      ]
+    },
+    "RandomForest": {
+      "n_estimators": [
+        100,
+        200,
+        500
       ]
     },
     "wrapper": {

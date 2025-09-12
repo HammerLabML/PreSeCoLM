@@ -3,6 +3,8 @@ import sys
 import json
 import pickle
 import pandas as pd
+import pie
+import sklearn.ensemble
 import yaml
 import scipy
 
@@ -18,16 +20,19 @@ from embedding import BertHuggingface
 
 import copy
 from salsa.SaLSA import SaLSA
-from pie import TorchPipelineForEmbeddings
+from pie import TorchPipelineForEmbeddings, ProtoTorchPipelineForEmbeddings, ScikitPipelineForEmbeddings, GMLVQ
+from sklearn.ensemble import RandomForestClassifier
 
 # local imports
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-import data_loader
-import models
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, parent_dir)
 import plotting
 import utils
 
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+import data_loader
+import models
 
 optimizer_lookup = {'Salsa': SaLSA, 'RMSprop': torch.optim.RMSprop, 'Adam': torch.optim.Adam, 'AdamW': torch.optim.AdamW, 'Adamax': torch.optim.Adamax,
                     'Adadelta': torch.optim.Adadelta, 'Adagrad': torch.optim.Adagrad, 'SparseAdam': torch.optim.SparseAdam, 'ASGD': torch.optim.ASGD,
@@ -36,7 +41,10 @@ criterion_lookup = {'BCEWithLogitsLoss': torch.nn.BCEWithLogitsLoss, 'MultiLabel
               'MSELoss': torch.nn.MSELoss, 'CTCLoss': torch.nn.CTCLoss, 'NLLLoss': torch.nn.NLLLoss, 'PoissonNLLLoss': torch.nn.PoissonNLLLoss, 'KLDivLoss': torch.nn.KLDivLoss, 'BCELoss': torch.nn.BCELoss, 'MarginRankingLoss': torch.nn.MarginRankingLoss,
               'HingeEmbeddingLoss': torch.nn.HingeEmbeddingLoss, 'MultiLabelMarginLoss': torch.nn.MultiLabelMarginLoss, 'HuberLoss': torch.nn.HuberLoss, 'SmoothL1Loss': torch.nn.SmoothL1Loss, 'SoftMarginLoss': torch.nn.SoftMarginLoss,
               'CosineEmbeddingLoss': torch.nn.CosineEmbeddingLoss, 'MultiMarginLoss': torch.nn.MultiMarginLoss, 'TripletMarginLoss': torch.nn.TripletMarginLoss, 'TripletMarginWithDistanceLoss': torch.nn.TripletMarginWithDistanceLoss}
-clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer}
+# lookup clf name to clf class
+clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer, 'GMLVQ': GMLVQ, 'RandomForest': RandomForestClassifier}
+# lookup clf name to pipeline class
+pipeline_lookup = {'MLP2': TorchPipelineForEmbeddings, 'linear': TorchPipelineForEmbeddings, 'MLP3': TorchPipelineForEmbeddings, 'GMLVQ': ProtoTorchPipelineForEmbeddings, 'RandomForest': ScikitPipelineForEmbeddings}
 
 
 def create_pred_savefile_name(base_dir):
@@ -47,16 +55,28 @@ def create_pred_savefile_name(base_dir):
     return file_name
 
 
-def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np.ndarray, y_val: np.ndarray,
-                         emb_test: np.ndarray, y_test: np.ndarray, g_test: np.ndarray, emb_def_attr: np.ndarray,
-                         g_def: np.ndarray, group_match_lookup: dict, groups_test: list, groups_pie: list,
-                         attr_lbl: list, clf_class: torch.nn.Module, cur_clf_params: dict, cur_wrapper_params: dict,
+def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np.ndarray, emb_val: np.ndarray,
+                         y_val: np.ndarray, g_val: np.ndarray, emb_test: np.ndarray, y_test: np.ndarray,
+                         g_test: np.ndarray, emb_def_attr: np.ndarray, g_def: np.ndarray, group_match_lookup: dict,
+                         groups_test: list, groups_pie: list, attr_lbl: list, clf_class: torch.nn.Module,
+                         pipeline_class: pie.Pipeline, cur_clf_params: dict, cur_wrapper_params: dict,
                          class_weights: np.ndarray, epochs: int, multi_label: bool) -> (float, float, float):
     clf_params = copy.deepcopy(cur_clf_params)
+    wrapper_params = copy.deepcopy(cur_wrapper_params)
     
     # set clf input size
-    n_concepts = cur_wrapper_params['n_concepts_protec'] + cur_wrapper_params['n_concepts_unsup']
-    clf_params['input_size'] = n_concepts
+    n_concepts = wrapper_params['n_concepts_protec'] + wrapper_params['n_concepts_unsup']
+    if pipeline_class == TorchPipelineForEmbeddings:
+        clf_params['input_size'] = n_concepts
+        wrapper_params['class_weights'] = class_weights
+    elif pipeline_class == ProtoTorchPipelineForEmbeddings:
+        clf_params.pop('output_size', None)
+    else:  # scikit learn pipeline
+        clf_params.pop('output_size', None)
+        wrapper_params.pop('optimizer', None)
+        wrapper_params.pop('criterion', None)
+        wrapper_params.pop('lr', None)
+        wrapper_params.pop('batch_size', None)
     
     if 'hidden_size_factor' in cur_clf_params.keys():
         assert (0 < clf_params['hidden_size_factor'] <= 1)
@@ -68,18 +88,35 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
             clf_params['hidden_size'] = int(n_concepts * clf_params['hidden_size_factor'])
         clf_params.pop('hidden_size_factor', None)
 
-    #print(clf_params)
-    #print(cur_wrapper_params)
-
     if not multi_label and y_train.ndim > 1:
         y_train = np.squeeze(y_train)
         y_val = np.squeeze(y_val)
 
     clf = clf_class(**clf_params)
-    pipeline = TorchPipelineForEmbeddings(clf, **cur_wrapper_params, class_weights=class_weights)
-    epochs = pipeline.fit_early_stopping(emb_protec=emb_def_attr, y_protec=g_def, emb_train=emb_train, y_train=y_train,
-                                         emb_val=emb_val, y_val=y_val, attr_lbl=attr_lbl, group_lbl=groups_pie,
-                                         max_epochs=epochs, delta=0.01, patience=10,)
+    print(wrapper_params)
+    pipeline = pipeline_class(head=clf, **wrapper_params)
+
+    if wrapper_params['method_protec'] == 'cav':
+        # using group label from the dataset to learn the sensitive concepts
+        if pipeline_class == ScikitPipelineForEmbeddings:
+            pipeline.fit(X_protec=emb_train, y_protec=g_train, X_task=emb_train, y_task=y_train, attr_lbl=None,
+                         group_lbl=groups_test)
+            epochs = -1
+        else:
+            epochs = pipeline.fit_early_stopping(X_protec=emb_train, y_protec=g_train, X_train=emb_train,
+                                             y_train=y_train, X_val=emb_val, y_val=y_val, attr_lbl=None,
+                                             group_lbl=groups_test,
+                                             max_epochs=epochs, delta=0.01, patience=10, )
+    else:  # bias space
+        # using defining attributes to model the sensitive concepts
+        if pipeline_class == ScikitPipelineForEmbeddings:
+            pipeline.fit(X_protec=emb_def_attr, y_protec=g_def, X_task=emb_train, y_task=y_train, attr_lbl=attr_lbl,
+                         group_lbl=groups_pie)
+            epochs = -1
+        else:
+            epochs = pipeline.fit_early_stopping(X_protec=emb_def_attr, y_protec=g_def, X_train=emb_train, y_train=y_train,
+                                             X_val=emb_val, y_val=y_val, attr_lbl=attr_lbl, group_lbl=groups_pie,
+                                             max_epochs=epochs, delta=0.01, patience=10,)
     pred, concepts = pipeline.predict(emb_test, return_concepts=True, verbose=True)
 
     if multi_label:
@@ -92,39 +129,54 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     rec = recall_score(y_test, y_pred, average='macro')
     print("F1 score: %.2f, Precision: %.2f, Recall: %.2f" % (f1, prec, rec))
 
-    # groups_pie is a list of lists -> create one list for matches
-    groups_pie = list(itertools.chain(*groups_pie))
-    print(groups_test)
-    print(groups_pie)
-
-    # extract the group names form the pipeline (format attr:group)
-    group_ids_pipeline = {} #= pipeline.group_lbl #[]
-    for group in groups_pie:
-        for i, group2 in enumerate(pipeline.group_lbl):
-            if group2.split(':')[1] == group:
-                group_ids_pipeline[group] = i
-    print(group_ids_pipeline)
-
-    # compute Pearson correlation of matching PIE concepts with the test groups
+    # compute Pearson correlation and PR-AUC of sensitive concepts with test group labels
     corrs = []
     pvalues = []
     aucs = []
     pie_matches = []
     groups_gt = []
-    for tid, group in enumerate(groups_test):
-        matches = group_match_lookup[group]
-        for match in matches:
-            pid = group_ids_pipeline[match]
-            pie_matches.append(pipeline.group_lbl[pid])
-            r, p = scipy.stats.pearsonr(concepts[:, pid], g_test[:, tid])
-            precision, recall, thresh = precision_recall_curve(g_test[:, tid], concepts[:, pid])
+    if wrapper_params['method_protec'] == 'cav':
+        # predicted and test groups match, compute scores pairwise
+        for tid, group in enumerate(groups_test):
+            pie_matches.append(group)
+            r, p = scipy.stats.pearsonr(concepts[:, tid], g_test[:, tid])
+            precision, recall, thresh = precision_recall_curve(g_test[:, tid], concepts[:, tid])
             corrs.append(r)
             pvalues.append(p)
             aucs.append(auc(recall, precision))
             groups_gt.append(group)
+    else:
+        # match bias space groups with the groups in the dataset
+        # there might be multiple possible matches defined in group_match_lookup
 
-    clf.to_cpu()
-    del clf
+        # groups_pie is a list of lists -> create one list for matches
+        groups_pie = list(itertools.chain(*groups_pie))
+        print(groups_test)
+        print(groups_pie)
+
+        # extract the group names form the pipeline (format attr:group)
+        group_ids_pipeline = {} #= pipeline.group_lbl #[]
+        for group in groups_pie:
+            for i, group2 in enumerate(pipeline.group_lbl):
+                if group2.split(':')[1] == group:
+                    group_ids_pipeline[group] = i
+        print(group_ids_pipeline)
+
+        for tid, group in enumerate(groups_test):
+            matches = group_match_lookup[group]
+            for match in matches:
+                pid = group_ids_pipeline[match]
+                pie_matches.append(pipeline.group_lbl[pid])
+                r, p = scipy.stats.pearsonr(concepts[:, pid], g_test[:, tid])
+                precision, recall, thresh = precision_recall_curve(g_test[:, tid], concepts[:, pid])
+                corrs.append(r)
+                pvalues.append(p)
+                aucs.append(auc(recall, precision))
+                groups_gt.append(group)
+
+    if isinstance(clf, torch.nn.Module):
+        clf.to_cpu()
+        del clf
 
     print(groups_gt)
     print("PR-AUC:", aucs)
@@ -138,7 +190,8 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
 
 def eval_cv(dataset: data_loader.CustomDataset, emb_def_attr: np.ndarray, g_def: np.ndarray,
             group_match_lookup: dict, groups_test: list, groups_pie: list, attr_lbl: list, clf_class: torch.nn.Module,
-            cur_clf_params: dict, cur_wrapper_params: dict, max_epochs: int) -> (float, float, float):
+            pipeline_class: pie.Pipeline, cur_clf_params: dict, cur_wrapper_params: dict,
+            max_epochs: int) -> (float, float, float):
     f1s = []
     precisions = []
     recalls = []
@@ -156,14 +209,15 @@ def eval_cv(dataset: data_loader.CustomDataset, emb_def_attr: np.ndarray, g_def:
         X_train, emb_train, y_train, g_train, cw, gw = data_dict['train']
         X_test, emb_test, y_test, g_test, _, _ = data_dict['test']
 
-        emb_train, emb_val, y_train, y_val = train_test_split(emb_train, y_train, test_size=0.1)
+        emb_train, emb_val, y_train, y_val, g_train, g_val = train_test_split(emb_train, y_train, g_train, test_size=0.1)
         g_train, groups, _ = utils.filter_group_labels(dataset.group_names, groups_test, g_train)
         g_test, _, _ = utils.filter_group_labels(dataset.group_names, groups_test, g_test)
 
         (cur_f1, cur_prec, cur_rec, cur_corrs, cur_pval, cur_auc, pie_label,
-         pie_matches, groups_gt, predictions, concepts, ep) = train_eval_one_split(emb_train, y_train, emb_val, y_val, emb_test, y_test,
+         pie_matches, groups_gt, predictions, concepts, ep) = train_eval_one_split(emb_train, y_train, g_train, emb_val,
+                                                                                   y_val, g_val, emb_test, y_test,
                                                              g_test, emb_def_attr, g_def, group_match_lookup,
-                                                             groups_test, groups_pie, attr_lbl, clf_class,
+                                                             groups_test, groups_pie, attr_lbl, clf_class, pipeline_class,
                                                              cur_clf_params, cur_wrapper_params, cw, max_epochs,
                                                              dataset.multi_label)
         f1s.append(cur_f1)
@@ -297,15 +351,16 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                         f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
                             predictions, concepts, ep = eval_cv(dataset, emb_def_attr, g_def, group_match_lookup,
                                                                 sel_groups, groups_pie, attr_lbl, clf_head_lookup[clf],
-                                                                clf_params, wrapper_params, max_epochs)
+                                                                pipeline_lookup[clf], clf_params, wrapper_params,
+                                                                max_epochs)
                     else:
                         f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
-                            predictions, concepts, ep = train_eval_one_split(emb_train, y_train, emb_dev, y_dev,
+                            predictions, concepts, ep = train_eval_one_split(emb_train, y_train, g_train, emb_dev, y_dev, g_dev,
                                                                              emb_test, y_test, g_test, emb_def_attr,
                                                                              g_def, group_match_lookup, sel_groups,
                                                                              groups_pie, attr_lbl,
-                                                                             clf_head_lookup[clf], clf_params,
-                                                                             wrapper_params, cw, max_epochs,
+                                                                             clf_head_lookup[clf], pipeline_lookup[clf],
+                                                                             clf_params, wrapper_params, cw, max_epochs,
                                                                              dataset.multi_label)
 
                     # save predictions (for CV concatenate all predictions):

@@ -1,27 +1,10 @@
 {
   "huggingface_models": [
     "bert-base-uncased",
-    "bert-large-uncased",
-    "distilbert-base-uncased",
-    "gpt2",
-    "roberta-base",
-    "roberta-large",
-    "distilroberta-base",
-    "google/electra-large-generator",
-    "google/electra-large-discriminator",
-    "google/electra-base-generator",
-    "google/electra-base-discriminator",
-    "albert-base-v2",
-    "albert-large-v2",
-    "EleutherAI/pythia-160m",
-    "EleutherAI/pythia-410m",
-    "EleutherAI/pythia-1b",
-    "EleutherAI/pythia-1.4b",
     "meta-llama/Llama-3.2-1B"
   ],
   "openai_models": [
-    "text-embedding-3-small",
-    "text-embedding-3-large"
+    "text-embedding-3-small"
   ],
   "pooling": [
     "mean"
@@ -29,12 +12,11 @@
   "embedding_dir": "../../artifacts/embeddings/",
   "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
   "def_term_file": "experiments/configs/new/defining_terms.yaml",
-  "results_dir": "experiments/results/performance/",
+  "results_dir": "experiments/results/performance2/",
   "pred_dir": "../../artifacts/pie_baseline_predictions/",
   "plot_dir": "experiments/plots/performance/",
   "max_epochs": 50,
   "datasets": [
-    {"name": "twitterAAE", "local_dir": null},
     {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
     {"name": "crows_pairs", "local_dir": null},
     {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},
@@ -42,26 +24,41 @@
     {"name": "stereoset", "local_dir": null}
   ],
   "classifier": {
+    "GMLVQ": {
+      "prototypes_per_class": [
+        2,
+        4,
+        6,
+        10,
+        15,
+        20
+      ]
+    },
+    "RandomForest": {
+      "n_estimators": [
+        100,
+        200,
+        500
+      ]
+    },
     "linear": {
     },
     "MLP2": {
       "hidden_size_factor": [
-        0.6,
-        0.8,
+        0.5,
         1.0
       ]
     },
     "MLP3": {
       "hidden_size_factor": [
-        0.6,
-        0.8,
+        0.5,
         1.0
       ]
     },
     "wrapper": {
-      "n_concepts_unsup": [20, 40, 60, 80, 100, 200, 400, 600, 800, 1000, 1500, 2000, -1],
-      "method_protec": ["bias_space"],
-      "method_unsup": ["pca"],
+      "n_concepts_unsup": [20, 40, 60, 80, 100, 150, 200, 250, 300, 400, 500, 600, 800, 1000, 1500, 2000, -1],
+      "method_protec": ["bias_space", "cav"],
+      "method_unsup": ["pca", "ica", "snmf"],
       "remove_protected_features": true,
       "optimizer": [
         "Salsa"
