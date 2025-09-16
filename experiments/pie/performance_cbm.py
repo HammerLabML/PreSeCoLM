@@ -19,11 +19,14 @@ import copy
 from salsa.SaLSA import SaLSA
 
 # local imports
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, parent_dir)
+import utils
+
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import data_loader
 import models
-import utils
 
 
 optimizer_lookup = {'Salsa': SaLSA, 'RMSprop': torch.optim.RMSprop, 'Adam': torch.optim.Adam, 'AdamW': torch.optim.AdamW, 'Adamax': torch.optim.Adamax,
@@ -328,14 +331,15 @@ def run(config):
         os.makedirs(config["pred_dir"])
 
     # prepare directory where results will be saved
-    if not os.path.isdir(config['results_dir']):
-        os.makedirs(config['results_dir'])
+    results_path = config['results_path']
+    results_dir = results_path.replace(results_path.split('/')[-1],'')
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
 
     # results for performance
     result_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
                    "clf hidden size factor", "emb size", "protected concepts", "other concepts",
                    "lambda", "optimizer", "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
-    results_path = config['results_dir'] + 'cbm_performance_results.csv'
     if os.path.isfile(results_path):
         results = pd.read_csv(results_path)
         print(results)
@@ -348,7 +352,7 @@ def run(config):
                            "lambda", "optimizer", "lr", "loss",
                            "group", "Pearson R", "pvalue", "PR-AUC", "Epochs", "concepts"]
 
-    results_concept_path = config['results_dir'] + 'cbm_concept_results.csv'
+    results_concept_path = results_path.replace('.csv', '_concept.csv')
     if os.path.isfile(results_concept_path):
         results_concept = pd.read_csv(results_concept_path)
     else:

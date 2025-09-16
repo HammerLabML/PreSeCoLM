@@ -11,7 +11,7 @@
   ],
   "embedding_dir": "../../artifacts/embeddings/",
   "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
-  "results_dir": "experiments/results/performance/",
+  "results_path": "experiments/results/performance/baseline.csv",
   "pred_dir": "../../artifacts/pie_baseline_predictions/",
   "plot_dir": "experiments/plots/performance/",
   "max_epochs": 50,

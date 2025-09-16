@@ -18,14 +18,18 @@ from embedding import BertHuggingface
 import copy
 from salsa.SaLSA import SaLSA
 
+from pie import GMLVQ, MultiLabelLVQ
+from sklearn.ensemble import RandomForestClassifier
+
 # local imports
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-import data_loader
-import models
-import plotting
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, parent_dir)
 import utils
 
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+import data_loader
+import models
 
 optimizer_lookup = {'Salsa': SaLSA, 'RMSprop': torch.optim.RMSprop, 'Adam': torch.optim.Adam, 'AdamW': torch.optim.AdamW, 'Adamax': torch.optim.Adamax,
                     'Adadelta': torch.optim.Adadelta, 'Adagrad': torch.optim.Adagrad, 'SparseAdam': torch.optim.SparseAdam, 'ASGD': torch.optim.ASGD,
@@ -34,8 +38,8 @@ criterion_lookup = {'BCEWithLogitsLoss': torch.nn.BCEWithLogitsLoss, 'MultiLabel
               'MSELoss': torch.nn.MSELoss, 'CTCLoss': torch.nn.CTCLoss, 'NLLLoss': torch.nn.NLLLoss, 'PoissonNLLLoss': torch.nn.PoissonNLLLoss, 'KLDivLoss': torch.nn.KLDivLoss, 'BCELoss': torch.nn.BCELoss, 'MarginRankingLoss': torch.nn.MarginRankingLoss,
               'HingeEmbeddingLoss': torch.nn.HingeEmbeddingLoss, 'MultiLabelMarginLoss': torch.nn.MultiLabelMarginLoss, 'HuberLoss': torch.nn.HuberLoss, 'SmoothL1Loss': torch.nn.SmoothL1Loss, 'SoftMarginLoss': torch.nn.SoftMarginLoss,
               'CosineEmbeddingLoss': torch.nn.CosineEmbeddingLoss, 'MultiMarginLoss': torch.nn.MultiMarginLoss, 'TripletMarginLoss': torch.nn.TripletMarginLoss, 'TripletMarginWithDistanceLoss': torch.nn.TripletMarginWithDistanceLoss}
-clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer}
-#multilabel_criterions = ['BCEWithLogitsLoss', 'MultiLabelSoftMarginLoss']
+clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer,
+                   'GMLVQ': GMLVQ, 'MultiLabelLVQ': MultiLabelLVQ, 'RandomForest': RandomForestClassifier}
 
 
 def create_pred_savefile_name(base_dir):
@@ -248,15 +252,16 @@ def run(config):
         os.makedirs(config["pred_dir"])
 
     # prepare directory where results will be saved
-    if not os.path.isdir(config['results_dir']):
-        os.makedirs(config['results_dir'])
+    results_path = config['results_path']
+    results_dir = results_path.replace(results_path.split('/')[-1], '')
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
 
     result_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
                    "clf hidden size factor", "emb size", "optimizer",
                    "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
 
     # read existing results or create new dataframe
-    results_path = config['results_dir'] + 'baseline_results.csv'
     if os.path.isfile(results_path):
         results = pd.read_csv(results_path)
     else:

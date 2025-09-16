@@ -26,7 +26,6 @@ from sklearn.ensemble import RandomForestClassifier
 # local imports
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, parent_dir)
-import plotting
 import utils
 
 from pathlib import Path
@@ -460,15 +459,16 @@ def run(config):
     group_match_lookup = def_term_config['group_matching']
 
     # prepare directory where results will be saved
-    if not os.path.isdir(config['results_dir']):
-        os.makedirs(config['results_dir'])
+    results_path = config['results_path']
+    results_dir = results_path.replace(results_path.split('/')[-1], '')
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
 
     # results for performance
     result_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
                    "clf hidden size factor", "emb size", "protected concepts", "other concepts",
                    "method protected", "method unsupervised", "remove protected", "optimizer",
                    "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
-    results_path = config['results_dir'] + 'pie_performance_results.csv'
     if os.path.isfile(results_path):
         results = pd.read_csv(results_path)
     else:
@@ -481,7 +481,7 @@ def run(config):
                            "optimizer", "lr", "loss", "group (pie)", "group (test)",
                            "Pearson R", "pvalue", "PR-AUC", "Epochs", "concepts"]
 
-    results_concept_path = config['results_dir'] + 'pie_concept_results.csv'
+    results_concept_path = results_path.replace('.csv', '_concept.csv')
     if os.path.isfile(results_concept_path):
         results_concept = pd.read_csv(results_concept_path)
     else:
