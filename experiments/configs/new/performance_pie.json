@@ -24,16 +24,6 @@
     {"name": "stereoset", "local_dir": null}
   ],
   "classifier": {
-    "GMLVQ": {
-      "prototypes_per_class": [
-        2,
-        4,
-        6,
-        10,
-        15,
-        20
-      ]
-    },
     "RandomForest": {
       "n_estimators": [
         100,

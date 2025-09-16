@@ -106,7 +106,7 @@ def get_multi_attr_def_terms_labels(term_dicts: dict) -> (list, np.ndarray):
     # count total number of labels (excl. -1)
     n_lbl = 0
     for groups in group_lbl:
-        if len(groups) == 1: # only 1D bias space
+        if len(groups) == 1:  # only 1D bias space
             n_lbl += 1
         else:
             n_lbl += len(groups)+1  # on for each group + any dir

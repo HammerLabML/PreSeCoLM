@@ -20,7 +20,7 @@ from embedding import BertHuggingface
 
 import copy
 from salsa.SaLSA import SaLSA
-from pie import TorchPipelineForEmbeddings, ProtoTorchPipelineForEmbeddings, ScikitPipelineForEmbeddings, GMLVQ
+from pie import TorchPipelineForEmbeddings, ProtoTorchPipelineForEmbeddings, ScikitPipelineForEmbeddings, GMLVQ, MultiLabelLVQ
 from sklearn.ensemble import RandomForestClassifier
 
 # local imports
@@ -42,9 +42,12 @@ criterion_lookup = {'BCEWithLogitsLoss': torch.nn.BCEWithLogitsLoss, 'MultiLabel
               'HingeEmbeddingLoss': torch.nn.HingeEmbeddingLoss, 'MultiLabelMarginLoss': torch.nn.MultiLabelMarginLoss, 'HuberLoss': torch.nn.HuberLoss, 'SmoothL1Loss': torch.nn.SmoothL1Loss, 'SoftMarginLoss': torch.nn.SoftMarginLoss,
               'CosineEmbeddingLoss': torch.nn.CosineEmbeddingLoss, 'MultiMarginLoss': torch.nn.MultiMarginLoss, 'TripletMarginLoss': torch.nn.TripletMarginLoss, 'TripletMarginWithDistanceLoss': torch.nn.TripletMarginWithDistanceLoss}
 # lookup clf name to clf class
-clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer, 'GMLVQ': GMLVQ, 'RandomForest': RandomForestClassifier}
+clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer,
+                   'GMLVQ': GMLVQ, 'MultiLabelLVQ': MultiLabelLVQ, 'RandomForest': RandomForestClassifier}
 # lookup clf name to pipeline class
-pipeline_lookup = {'MLP2': TorchPipelineForEmbeddings, 'linear': TorchPipelineForEmbeddings, 'MLP3': TorchPipelineForEmbeddings, 'GMLVQ': ProtoTorchPipelineForEmbeddings, 'RandomForest': ScikitPipelineForEmbeddings}
+pipeline_lookup = {'MLP2': TorchPipelineForEmbeddings, 'linear': TorchPipelineForEmbeddings,
+                   'MLP3': TorchPipelineForEmbeddings,  'GMLVQ': ProtoTorchPipelineForEmbeddings,
+                   'MultiLabelLVQ': ProtoTorchPipelineForEmbeddings, 'RandomForest': ScikitPipelineForEmbeddings}
 
 
 def create_pred_savefile_name(base_dir):
@@ -63,7 +66,11 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np
                          class_weights: np.ndarray, epochs: int, multi_label: bool) -> (float, float, float):
     clf_params = copy.deepcopy(cur_clf_params)
     wrapper_params = copy.deepcopy(cur_wrapper_params)
-    
+
+    # adjust n protected concepts based on method
+    wrapper_params['n_concepts_protec'] = wrapper_params['n_concepts_protec_choices'][wrapper_params['method_protec']]
+    wrapper_params.pop('n_concepts_protec_choices', None)
+
     # set clf input size
     n_concepts = wrapper_params['n_concepts_protec'] + wrapper_params['n_concepts_unsup']
     if pipeline_class == TorchPipelineForEmbeddings:
@@ -88,12 +95,19 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np
             clf_params['hidden_size'] = int(n_concepts * clf_params['hidden_size_factor'])
         clf_params.pop('hidden_size_factor', None)
 
+    if clf_class == MultiLabelLVQ:
+        clf_params['lvq_class'] = clf_head_lookup[clf_params['lvq_class']]
+
     if not multi_label and y_train.ndim > 1:
         y_train = np.squeeze(y_train)
         y_val = np.squeeze(y_val)
 
-    clf = clf_class(**clf_params)
+    print("current classifier and wrapper parameters:")
+    print(pipeline_class)
     print(wrapper_params)
+    print(clf_class)
+    print(clf_params)
+    clf = clf_class(**clf_params)
     pipeline = pipeline_class(head=clf, **wrapper_params)
 
     if wrapper_params['method_protec'] == 'cav':
@@ -174,9 +188,9 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np
                 aucs.append(auc(recall, precision))
                 groups_gt.append(group)
 
-    if isinstance(clf, torch.nn.Module):
-        clf.to_cpu()
-        del clf
+    #if isinstance(clf, torch.nn.Module):
+    #    clf.to_cpu()
+    #    del clf
 
     print(groups_gt)
     print("PR-AUC:", aucs)
@@ -270,13 +284,12 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     sel_groups = list(group_match_lookup.keys())
     attr_lbl = list(cur_def_terms.keys())
 
-    print(dataset_name)
-    print(sel_groups)
-    print(attr_lbl)
-    print(cur_def_terms)
+    #print(dataset_name)
+    #print(sel_groups)
+    #print(attr_lbl)
+    #print(cur_def_terms)
 
     defining_terms, g_def, n_protected_concepts, groups_pie = utils.get_multi_attr_def_terms_labels(cur_def_terms)
-
     #groups_pie = []
     #for attr, terms_per_group in defining_term_lookup.items():
     #    groups_pie += list(terms_per_group.keys())
@@ -292,8 +305,11 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     # create list with classifier/ parameter configurations
     # add input and output size (matching the embedding size to clf parameters)
     clf_parameters = copy.deepcopy(clf_param_dict)
-    clf_parameters['wrapper']['n_concepts_protec'] = n_protected_concepts
-    #n_concepts = clf_parameters['wrapper']['n_concepts_protec'] + clf_parameters['wrapper']['n_concepts_unsup'][0]
+
+    # n concepts can differ based on the chosen method, here just take max to determine valid parameter choices later
+    max_n_concepts_protec = max(n_protected_concepts, len(dataset.group_names))
+    clf_parameters['wrapper']['n_concepts_protec_choices'] = {'cav': len(dataset.group_names),
+                                                              'bias_space': n_protected_concepts}
 
     for key in clf_param_dict:
         if key != 'wrapper':
@@ -335,9 +351,9 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
         for clf_params in clf_parameter_sets[clf]:
             for wrapper_params in clf_parameter_sets['wrapper']:
                 if wrapper_params['n_concepts_unsup'] == -1:
-                    wrapper_params['n_concepts_unsup'] = emb_dim - wrapper_params['n_concepts_protec']
+                    wrapper_params['n_concepts_unsup'] = emb_dim - max_n_concepts_protec
                     print(wrapper_params['n_concepts_unsup'])
-                n_concepts = wrapper_params['n_concepts_protec'] + wrapper_params['n_concepts_unsup']
+                n_concepts = max_n_concepts_protec + wrapper_params['n_concepts_unsup']
 
                 if n_concepts > emb_def_attr.shape[1]:
                     print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the embedding size" % wrapper_params['n_concepts_unsup'])
@@ -368,17 +384,17 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     file_name = create_pred_savefile_name(pred_dir)
                     with open(file_name, "wb") as handle:
                         pickle.dump(save_dict, handle)
+                #except RuntimeError as error:
+                #    print("learning failed for %s on %s" % (model_name, dataset_name))
+                #    print(error)
+                #    f1 = 0
+                #    prec = 0
+                #    rec = 0
+                #    ep = 0
+                #    file_name = 'na'
+                #    sel_groups_pie = []  # no concept results will be written to the csv
+                #    groups_gt = []
                 except ValueError as error:
-                    print("learning failed for %s on %s" % (model_name, dataset_name))
-                    print(error)
-                    f1 = 0
-                    prec = 0
-                    rec = 0
-                    ep = 0
-                    file_name = 'na'
-                    sel_groups_pie = []  # no concept results will be written to the csv
-                    groups_gt = []
-                except RuntimeError as error:
                     print("learning failed for %s on %s" % (model_name, dataset_name))
                     print(error)
                     f1 = 0
@@ -396,6 +412,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                 loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
                 emb_dim = dataset.data_preprocessed[dataset.splits[0]].shape[1]
 
+                ep = np.mean(ep)
+                print("scores: ", f1, prec, rec)
                 # performance results (only one row per dataset and clf/wrapper params
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture, 'pie',
                                                    pooling, clf, hidden_size, emb_dim, n_protected_concepts,
@@ -492,7 +510,7 @@ def run(config):
         if model in batch_size_lookup.keys():
             batch_size = batch_size_lookup[model]
         if model in openai_models:
-            pooling_choices = ['']
+            pooling_choices = ['/']
 
         for pool in pooling_choices:
             for dataset_setup in config['datasets']:
