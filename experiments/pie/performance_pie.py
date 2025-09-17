@@ -20,7 +20,7 @@ from embedding import BertHuggingface
 import copy
 from salsa.SaLSA import SaLSA
 from pie import (TorchPipelineForEmbeddings, ProtoTorchPipelineForEmbeddings, ScikitPipelineForEmbeddings,
-                 GMLVQ, MultiLabelLVQ, TorchLVQ)
+                 GMLVQ, MultiLabelLVQ, TorchLVQ, GLVQ)
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.base import BaseEstimator
 
@@ -43,10 +43,10 @@ criterion_lookup = {'BCEWithLogitsLoss': torch.nn.BCEWithLogitsLoss, 'MultiLabel
               'CosineEmbeddingLoss': torch.nn.CosineEmbeddingLoss, 'MultiMarginLoss': torch.nn.MultiMarginLoss, 'TripletMarginLoss': torch.nn.TripletMarginLoss, 'TripletMarginWithDistanceLoss': torch.nn.TripletMarginWithDistanceLoss}
 # lookup clf name to clf class
 clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer,
-                   'GMLVQ': GMLVQ, 'MultiLabelLVQ': MultiLabelLVQ, 'RandomForest': RandomForestClassifier}
+                   'GMLVQ': GMLVQ, 'GLVQ': GLVQ, 'MultiLabelLVQ': MultiLabelLVQ, 'RandomForest': RandomForestClassifier}
 # lookup clf name to pipeline class
 pipeline_lookup = {'MLP2': TorchPipelineForEmbeddings, 'linear': TorchPipelineForEmbeddings,
-                   'MLP3': TorchPipelineForEmbeddings,  'GMLVQ': ProtoTorchPipelineForEmbeddings,
+                   'MLP3': TorchPipelineForEmbeddings,  'GMLVQ': ProtoTorchPipelineForEmbeddings, 'GLVQ': ProtoTorchPipelineForEmbeddings,
                    'MultiLabelLVQ': ProtoTorchPipelineForEmbeddings, 'RandomForest': ScikitPipelineForEmbeddings}
 
 

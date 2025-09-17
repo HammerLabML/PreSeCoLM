@@ -18,7 +18,7 @@ from embedding import BertHuggingface
 import copy
 from salsa.SaLSA import SaLSA
 
-from pie import GMLVQ, MultiLabelLVQ, TorchLVQ
+from pie import GMLVQ, MultiLabelLVQ, TorchLVQ, GLVQ
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.base import BaseEstimator
 
@@ -40,9 +40,9 @@ criterion_lookup = {'BCEWithLogitsLoss': torch.nn.BCEWithLogitsLoss, 'MultiLabel
               'HingeEmbeddingLoss': torch.nn.HingeEmbeddingLoss, 'MultiLabelMarginLoss': torch.nn.MultiLabelMarginLoss, 'HuberLoss': torch.nn.HuberLoss, 'SmoothL1Loss': torch.nn.SmoothL1Loss, 'SoftMarginLoss': torch.nn.SoftMarginLoss,
               'CosineEmbeddingLoss': torch.nn.CosineEmbeddingLoss, 'MultiMarginLoss': torch.nn.MultiMarginLoss, 'TripletMarginLoss': torch.nn.TripletMarginLoss, 'TripletMarginWithDistanceLoss': torch.nn.TripletMarginWithDistanceLoss}
 clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer,
-                   'GMLVQ': GMLVQ, 'MultiLabelLVQ': MultiLabelLVQ, 'RandomForest': RandomForestClassifier}
+                   'GMLVQ': GMLVQ, 'GLVQ': GLVQ, 'MultiLabelLVQ': MultiLabelLVQ, 'RandomForest': RandomForestClassifier}
 wrapper_lookup = {'MLP2': models.ClfWrapper, 'linear': models.ClfWrapper,
-                   'MLP3': models.ClfWrapper,  'GMLVQ': models.PrototorchWrapper,
+                   'MLP3': models.ClfWrapper,  'GMLVQ': models.PrototorchWrapper, 'GLVQ': models.PrototorchWrapper,
                    'MultiLabelLVQ': models.PrototorchWrapper, 'RandomForest': None}
 
 
