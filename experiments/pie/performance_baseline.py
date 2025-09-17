@@ -18,8 +18,9 @@ from embedding import BertHuggingface
 import copy
 from salsa.SaLSA import SaLSA
 
-from pie import GMLVQ, MultiLabelLVQ
+from pie import GMLVQ, MultiLabelLVQ, TorchLVQ
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.base import BaseEstimator
 
 # local imports
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -40,6 +41,9 @@ criterion_lookup = {'BCEWithLogitsLoss': torch.nn.BCEWithLogitsLoss, 'MultiLabel
               'CosineEmbeddingLoss': torch.nn.CosineEmbeddingLoss, 'MultiMarginLoss': torch.nn.MultiMarginLoss, 'TripletMarginLoss': torch.nn.TripletMarginLoss, 'TripletMarginWithDistanceLoss': torch.nn.TripletMarginWithDistanceLoss}
 clf_head_lookup = {'MLP2': models.MLP2Layer, 'linear': models.LinearClassifier, 'MLP3': models.MLP3Layer,
                    'GMLVQ': GMLVQ, 'MultiLabelLVQ': MultiLabelLVQ, 'RandomForest': RandomForestClassifier}
+wrapper_lookup = {'MLP2': models.ClfWrapper, 'linear': models.ClfWrapper,
+                   'MLP3': models.ClfWrapper,  'GMLVQ': models.PrototorchWrapper,
+                   'MultiLabelLVQ': models.PrototorchWrapper, 'RandomForest': None}
 
 
 def create_pred_savefile_name(base_dir):
@@ -51,49 +55,76 @@ def create_pred_savefile_name(base_dir):
 
 
 def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np.ndarray, y_val: np.ndarray,
-                         emb_test: np.ndarray, y_test: np.ndarray, clf_class: torch.nn.Module,
+                         emb_test: np.ndarray, y_test: np.ndarray, clf_class, wrapper_class,
                          cur_clf_params: dict, cur_wrapper_params: dict, class_weights: np.ndarray, epochs: int,
                          multi_label: bool) -> (float, float, float):
     clf_params = copy.deepcopy(cur_clf_params)
+    wrapper_params = copy.deepcopy(cur_wrapper_params)
     n_features = emb_train.shape[1]
-    clf_params['input_size'] = n_features
-    if 'hidden_size_factor' in cur_clf_params.keys():
-        assert (0 < clf_params['hidden_size_factor'] <= 1)
-        if clf_class == models.MLP3Layer:
-            # got 2 hidden layers
-            clf_params['hidden_size1'] = int(n_features * clf_params['hidden_size_factor'])
-            clf_params['hidden_size2'] = int(clf_params['hidden_size1'] * clf_params['hidden_size_factor'])
-        else:
-            clf_params['hidden_size'] = int(n_features * clf_params['hidden_size_factor'])
-        clf_params.pop('hidden_size_factor', None)
+
+    if issubclass(clf_class, TorchLVQ):
+        clf_params.pop('input_size', None)
+        clf_params.pop('output_size', None)
+        if clf_class == MultiLabelLVQ:
+            clf_params['lvq_class'] = clf_head_lookup[clf_params['lvq_class']]
+    elif issubclass(clf_class, BaseEstimator):
+        clf_params.pop('input_size', None)
+        clf_params.pop('output_size', None)
+        wrapper_params.pop('optimizer', None)
+        wrapper_params.pop('criterion', None)
+        wrapper_params.pop('lr', None)
+        wrapper_params.pop('batch_size', None)
+    else:  # regular torch network
+        #clf_params['input_size'] = n_features
+        wrapper_params['class_weights'] = class_weights
+
+        if 'hidden_size_factor' in cur_clf_params.keys():
+            assert (0 < clf_params['hidden_size_factor'] <= 1)
+            if clf_class == models.MLP3Layer:
+                # got 2 hidden layers
+                clf_params['hidden_size1'] = int(n_features * clf_params['hidden_size_factor'])
+                clf_params['hidden_size2'] = int(clf_params['hidden_size1'] * clf_params['hidden_size_factor'])
+            else:
+                clf_params['hidden_size'] = int(n_features * clf_params['hidden_size_factor'])
+    clf_params.pop('hidden_size_factor', None)
 
     if not multi_label and y_train.ndim > 1:
         y_train = np.squeeze(y_train)
         y_val = np.squeeze(y_val)
 
     clf = clf_class(**clf_params)
-    wrapper = models.ClfWrapper(clf, **cur_wrapper_params, class_weights=class_weights)
 
-    epochs = wrapper.fit_early_stopping(emb_train, y_train, emb_val, y_val, max_epochs=epochs, delta=0.001, patience=10)
-    pred = wrapper.predict(emb_test)
-
-    if multi_label:
-        y_pred = (pred > 0.5).astype('int')
+    if issubclass(clf_class, BaseEstimator):
+        # no wrapper needed
+        clf.fit(emb_train, y_train)
+        y_pred = clf.predict(emb_test)
+        pred = y_pred
+        epochs = -1
     else:
-        y_pred = np.argmax(pred, axis=1)
+        wrapper = wrapper_class(clf, **wrapper_params)
+        epochs = wrapper.fit_early_stopping(emb_train, y_train, emb_val, y_val, max_epochs=epochs, delta=0.001, patience=10)
+        pred = wrapper.predict(emb_test)
+
+        if issubclass(clf_class, TorchLVQ):
+            y_pred = pred
+        else:
+            if multi_label:
+                y_pred = (pred > 0.5).astype('int')
+            else:
+                y_pred = np.argmax(pred, axis=1)
 
     f1 = f1_score(y_test, y_pred, average='macro')
     prec = precision_score(y_test, y_pred, average='macro')
     rec = recall_score(y_test, y_pred, average='macro')
     print("F1 score: %.2f, Precision: %.2f, Recall: %.2f" % (f1, prec, rec))
 
-    clf.to_cpu()
-    del clf
+    #clf.to_cpu()
+    #del clf
 
     return f1, prec, rec, pred, epochs
 
 
-def eval_cv(dataset: data_loader.CustomDataset, clf_class: torch.nn.Module, cur_clf_params: dict,
+def eval_cv(dataset: data_loader.CustomDataset, clf_class, wrapper_class, cur_clf_params: dict,
             cur_wrapper_params: dict, max_epochs: int) -> (float, float, float):
     f1s = []
     precisions = []
@@ -110,7 +141,7 @@ def eval_cv(dataset: data_loader.CustomDataset, clf_class: torch.nn.Module, cur_
         #g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
         cur_f1, cur_prec, cur_rec, predictions, ep = train_eval_one_split(emb_train, y_train, emb_val, y_val, emb_test,
-                                                                          y_test, clf_class, cur_clf_params,
+                                                                          y_test, clf_class, wrapper_class, cur_clf_params,
                                                                           cur_wrapper_params, cw, max_epochs,
                                                                           dataset.multi_label)
         f1s.append(cur_f1)
@@ -189,16 +220,32 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
         #g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
 
     classifier_choices = [key for key in clf_parameters.keys() if key != 'wrapper']
+    if not dataset.multi_label and 'MultiLabelLVQ' in classifier_choices:
+        # this classifier only handles multi-label datasets, but its base classes can be used
+        # for single-label classification instead
+        classifier_choices.remove('MultiLabelLVQ')
+        for clf in clf_parameters['MultiLabelLVQ']['lvq_class']:
+            if clf in classifier_choices:
+                continue
+            params = []
+            for elem in clf_parameter_sets['MultiLabelLVQ']:
+                new_elem = copy.deepcopy(elem)
+                new_elem.pop('lvq_class', None)
+                params.append(new_elem)
+            clf_parameter_sets[clf] = params
+            classifier_choices.append(clf)
+
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
             for wrapper_params in clf_parameter_sets['wrapper']:
                 try:  # salsa might fail
                     if use_cv:
-                        f1, prec, rec, predictions, ep = eval_cv(dataset, clf_head_lookup[clf], clf_params, wrapper_params,
-                                                                 max_epochs)
+                        f1, prec, rec, predictions, ep = eval_cv(dataset, clf_head_lookup[clf], wrapper_lookup[clf],
+                                                                 clf_params, wrapper_params, max_epochs)
                     else:
                         f1, prec, rec, predictions, ep = train_eval_one_split(emb_train, y_train, emb_dev, y_dev, emb_test,
-                                                                              y_test, clf_head_lookup[clf], clf_params,
+                                                                              y_test, clf_head_lookup[clf],
+                                                                              wrapper_lookup[clf], clf_params,
                                                                               wrapper_params, cw,  max_epochs,
                                                                               dataset.multi_label)
 
@@ -223,15 +270,30 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                     file_name = 'na'
 
                 hidden_size = -1
+                rf_n_estimators = -1
+                lvq_min_proto = -1
+                lvq_proto_ratio = ""
+                lvq_max_ratio = -1
+                lvq_class = clf
                 if 'hidden_size_factor' in clf_params.keys():
                     hidden_size = clf_params['hidden_size_factor']
+                if clf == 'RandomForest':
+                    rf_n_estimators = clf_params['n_estimators']
+                if 'LVQ' in clf:
+                    lvq_class = clf_params['lvq_class']
+                    lvq_min_proto = clf_params['min_prototypes_per_class']
+                    lvq_proto_ratio = clf_params['prototype_ratio']
+                    lvq_max_ratio = clf_params['max_ratio']
                 optim = list(optimizer_lookup.keys())[list(optimizer_lookup.values()).index(wrapper_params['optimizer'])]
                 loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
                 emb_dim = dataset.data_preprocessed[dataset.splits[0]].shape[1]
 
+                ep = np.mean(ep)
+                print("scores: ", f1, prec, rec)
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture, 'baseline',
                                                    pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
-                                                   loss_fct, f1, prec, rec, ep, file_name]
+                                                   loss_fct, f1, prec, rec, ep, file_name,
+                                                   rf_n_estimators, lvq_class, lvq_min_proto, lvq_proto_ratio, lvq_max_ratio]
 
     return results
 
@@ -259,7 +321,8 @@ def run(config):
 
     result_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
                    "clf hidden size factor", "emb size", "optimizer",
-                   "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
+                   "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions",
+                   "rf_n_estimators", "lvq_class", "lvq_min_prototypes", "lvq_prototype_ratio", "lvq_max_ratio"]
 
     # read existing results or create new dataframe
     if os.path.isfile(results_path):

@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.data import TensorDataset, DataLoader
 from salsa.SaLSA import SaLSA
-
+import prototorch as pt
 
 class BertLikeClassifier(torch.nn.Module):
     def __init__(self, input_size: int, output_size: int):
@@ -115,6 +115,64 @@ class LinearClassifier(torch.nn.Module):
     def to_cpu(self):
         self.linear1 = self.linear1.to('cpu')
         self.sigmoid = self.sigmoid.to('cpu')
+
+
+class PrototorchWrapper:
+    def __init__(self, model: torch.nn.Module, batch_size: int, class_weights=None, criterion=torch.nn.BCEWithLogitsLoss,
+                 optimizer=torch.optim.RMSprop, lr=1e-3):
+        self.model = model
+        self.batch_size = batch_size
+        self.criterion = pt.losses.GLVQLoss()
+
+        # the optimizer will be  initialized in fit(),
+        # because the prototorch head needs data to finish initializiation
+        self.optimizer = None
+        self.optimizer_class = optimizer
+        self.lr = lr
+
+    def fit_early_stopping(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray,
+                           max_epochs: int, delta: float = 0.0, patience: int = 10, verbose: bool = False):
+        print("early stopping not supported for ProtoTorchPipeline, use regular fit() function")
+        self.fit(X_train, y_train, epochs=max_epochs, verbose=verbose)
+        return max_epochs
+
+    def fit(self, X, y, epochs, verbose=False):
+        # init LVQ prototypes with the data
+        self.model.init_data(TensorDataset(torch.tensor(X), torch.tensor(y)))
+
+        # LVQ implementation has their own fit function
+        self.model.fit(X, y, self.optimizer_class, self.lr, self.criterion, batch_size=self.batch_size,
+                       epochs=epochs, verbose=verbose, init_head=True)
+
+    def predict(self, X, verbose=False):
+        dataset = TensorDataset(torch.tensor(X))
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        pred_outputs = []
+
+        if verbose:
+            loop = tqdm(loader, leave=True)
+        else:
+            loop = loader
+
+        for batch in loop:
+            batch_x = batch[0]
+            if torch.cuda.is_available():
+                batch_x = batch_x.to('cuda')
+
+            pred = self.model.predict(batch_x)
+            pred_outputs.append(pred.to('cpu').detach().numpy())
+
+            batch_x = batch_x.to('cpu')
+            del batch_x
+            torch.cuda.empty_cache()
+
+        # handle 1D output from LQV
+        if pred_outputs[0].ndim == 1:
+            pred_stack = np.vstack([np.expand_dims(pred, axis=1) for pred in pred_outputs]).squeeze()
+        else:
+            pred_stack = np.vstack(pred_outputs)
+
+        return pred_stack
 
 
 class ClfWrapper:

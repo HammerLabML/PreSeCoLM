@@ -4,7 +4,6 @@ import json
 import pickle
 import pandas as pd
 import pie
-import sklearn.ensemble
 import yaml
 import scipy
 
@@ -20,8 +19,10 @@ from embedding import BertHuggingface
 
 import copy
 from salsa.SaLSA import SaLSA
-from pie import TorchPipelineForEmbeddings, ProtoTorchPipelineForEmbeddings, ScikitPipelineForEmbeddings, GMLVQ, MultiLabelLVQ
+from pie import (TorchPipelineForEmbeddings, ProtoTorchPipelineForEmbeddings, ScikitPipelineForEmbeddings,
+                 GMLVQ, MultiLabelLVQ, TorchLVQ)
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.base import BaseEstimator
 
 # local imports
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -60,8 +61,8 @@ def create_pred_savefile_name(base_dir):
 def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np.ndarray, emb_val: np.ndarray,
                          y_val: np.ndarray, g_val: np.ndarray, emb_test: np.ndarray, y_test: np.ndarray,
                          g_test: np.ndarray, emb_def_attr: np.ndarray, g_def: np.ndarray, group_match_lookup: dict,
-                         groups_test: list, groups_pie: list, attr_lbl: list, clf_class: torch.nn.Module,
-                         pipeline_class: pie.Pipeline, cur_clf_params: dict, cur_wrapper_params: dict,
+                         groups_test: list, groups_pie: list, attr_lbl: list, clf_class,
+                         pipeline_class, cur_clf_params: dict, cur_wrapper_params: dict,
                          class_weights: np.ndarray, epochs: int, multi_label: bool) -> (float, float, float):
     clf_params = copy.deepcopy(cur_clf_params)
     wrapper_params = copy.deepcopy(cur_wrapper_params)
@@ -72,30 +73,29 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np
 
     # set clf input size
     n_concepts = wrapper_params['n_concepts_protec'] + wrapper_params['n_concepts_unsup']
-    if pipeline_class == TorchPipelineForEmbeddings:
-        clf_params['input_size'] = n_concepts
-        wrapper_params['class_weights'] = class_weights
-    elif pipeline_class == ProtoTorchPipelineForEmbeddings:
+    if issubclass(clf_class, TorchLVQ):
         clf_params.pop('output_size', None)
-    else:  # scikit learn pipeline
+        if clf_class == MultiLabelLVQ:
+            clf_params['lvq_class'] = clf_head_lookup[clf_params['lvq_class']]
+    elif issubclass(clf_class, BaseEstimator):
         clf_params.pop('output_size', None)
         wrapper_params.pop('optimizer', None)
         wrapper_params.pop('criterion', None)
         wrapper_params.pop('lr', None)
         wrapper_params.pop('batch_size', None)
-    
-    if 'hidden_size_factor' in cur_clf_params.keys():
-        assert (0 < clf_params['hidden_size_factor'] <= 1)
-        if clf_class == models.MLP3Layer:
-            # got 2 hidden layers
-            clf_params['hidden_size1'] = int(n_concepts * clf_params['hidden_size_factor'])
-            clf_params['hidden_size2'] = int(clf_params['hidden_size1'] * clf_params['hidden_size_factor'])
-        else:
-            clf_params['hidden_size'] = int(n_concepts * clf_params['hidden_size_factor'])
-        clf_params.pop('hidden_size_factor', None)
+    else:  # regular torch network
+        clf_params['input_size'] = n_concepts
+        wrapper_params['class_weights'] = class_weights
 
-    if clf_class == MultiLabelLVQ:
-        clf_params['lvq_class'] = clf_head_lookup[clf_params['lvq_class']]
+        if 'hidden_size_factor' in cur_clf_params.keys():
+            assert (0 < clf_params['hidden_size_factor'] <= 1)
+            if clf_class == models.MLP3Layer:
+                # got 2 hidden layers
+                clf_params['hidden_size1'] = int(n_concepts * clf_params['hidden_size_factor'])
+                clf_params['hidden_size2'] = int(clf_params['hidden_size1'] * clf_params['hidden_size_factor'])
+            else:
+                clf_params['hidden_size'] = int(n_concepts * clf_params['hidden_size_factor'])
+    clf_params.pop('hidden_size_factor', None)
 
     if not multi_label and y_train.ndim > 1:
         y_train = np.squeeze(y_train)
@@ -346,6 +346,12 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
         n_samples_train = len(data_dict['train'][0])
 
     classifier_choices = [key for key in clf_parameters.keys() if key != 'wrapper']
+    if not dataset.multi_label and 'MultiLabelLVQ' in classifier_choices:
+        # this classifier only handles multi-label datasets, but its base classes can be used
+        # for single-label classification instead
+        classifier_choices.remove('MultiLabelLVQ')
+        classifier_choices += clf_parameters['MultiLabelLVQ']['lvq_class']
+
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
             for wrapper_params in clf_parameter_sets['wrapper']:
@@ -405,8 +411,20 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     groups_gt = []
 
                 hidden_size = -1
+                rf_n_estimators = -1
+                lvq_min_proto = -1
+                lvq_proto_ratio = ""
+                lvq_max_ratio = -1
+                lvq_class = clf
                 if 'hidden_size_factor' in clf_params.keys():
                     hidden_size = clf_params['hidden_size_factor']
+                if clf == 'RandomForest':
+                    rf_n_estimators = clf_params['n_estimators']
+                if clf == 'LVQWithMultiLabelSupport':
+                    lvq_class = clf_params['lvq_class']
+                    lvq_min_proto = clf_params['min_prototypes_per_class']
+                    lvq_proto_ratio = clf_params['prototype_ratio']
+                    lvq_max_ratio = clf_params['max_ratio']
                 optim = list(optimizer_lookup.keys())[list(optimizer_lookup.values()).index(wrapper_params['optimizer'])]
                 loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
                 emb_dim = dataset.data_preprocessed[dataset.splits[0]].shape[1]
@@ -418,7 +436,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                                                    pooling, clf, hidden_size, emb_dim, n_protected_concepts,
                                                    wrapper_params['n_concepts_unsup'], wrapper_params['method_protec'],
                                                    wrapper_params['method_unsup'], wrapper_params['remove_protected_features'], optim, wrapper_params['lr'],
-                                                   loss_fct, f1, prec, rec, ep, file_name]
+                                                   loss_fct, f1, prec, rec, ep, file_name,
+                                                   rf_n_estimators, lvq_class, lvq_min_proto, lvq_proto_ratio, lvq_max_ratio]
 
                 # concept results (one row for each protected group)
                 # if training failed sel_groups_pie will be empty and no results will be written
@@ -468,7 +487,8 @@ def run(config):
     result_keys = ["dataset", "model", "model type", "architecture", "method", "pooling", "classifier",
                    "clf hidden size factor", "emb size", "protected concepts", "other concepts",
                    "method protected", "method unsupervised", "remove protected", "optimizer",
-                   "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions"]
+                   "lr", "loss", "F1", "Precision", "Recall", "Epochs", "Predictions",
+                           "rf_n_estimators", "lvq_class", "lvq_min_prototypes", "lvq_prototype_ratio", "lvq_max_ratio"]
     if os.path.isfile(results_path):
         results = pd.read_csv(results_path)
     else:
