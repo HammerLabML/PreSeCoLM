@@ -70,10 +70,6 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     elif issubclass(clf_class, BaseEstimator):
         clf_params.pop('input_size', None)
         clf_params.pop('output_size', None)
-        wrapper_params.pop('optimizer', None)
-        wrapper_params.pop('criterion', None)
-        wrapper_params.pop('lr', None)
-        wrapper_params.pop('batch_size', None)
     else:  # regular torch network
         #clf_params['input_size'] = n_features
         wrapper_params['class_weights'] = class_weights
@@ -117,9 +113,6 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, emb_val: np
     prec = precision_score(y_test, y_pred, average='macro')
     rec = recall_score(y_test, y_pred, average='macro')
     print("F1 score: %.2f, Precision: %.2f, Recall: %.2f" % (f1, prec, rec))
-
-    #clf.to_cpu()
-    #del clf
 
     return f1, prec, rec, pred, epochs
 

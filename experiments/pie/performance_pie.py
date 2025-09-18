@@ -187,10 +187,6 @@ def train_eval_one_split(emb_train: np.ndarray, y_train: np.ndarray, g_train: np
                 aucs.append(auc(recall, precision))
                 groups_gt.append(group)
 
-    #if isinstance(clf, torch.nn.Module):
-    #    clf.to_cpu()
-    #    del clf
-
     print(groups_gt)
     print("PR-AUC:", aucs)
 
@@ -283,15 +279,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     sel_groups = list(group_match_lookup.keys())
     attr_lbl = list(cur_def_terms.keys())
 
-    #print(dataset_name)
-    #print(sel_groups)
-    #print(attr_lbl)
-    #print(cur_def_terms)
-
     defining_terms, g_def, n_protected_concepts, groups_pie = utils.get_multi_attr_def_terms_labels(cur_def_terms)
-    #groups_pie = []
-    #for attr, terms_per_group in defining_term_lookup.items():
-    #    groups_pie += list(terms_per_group.keys())
 
     model_type, model_architecture = utils.get_model_type_architecture(model_name)
     dataset, emb_def_attr = utils.get_dataset_with_embeddings(emb_dir, dataset_name, model_name, pooling, batch_size,
@@ -306,8 +294,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
     clf_parameters = copy.deepcopy(clf_param_dict)
 
     # n concepts can differ based on the chosen method, here just take max to determine valid parameter choices later
-    max_n_concepts_protec = max(n_protected_concepts, len(dataset.group_names))
-    clf_parameters['wrapper']['n_concepts_protec_choices'] = {'cav': len(dataset.group_names),
+    max_n_concepts_protec = max(n_protected_concepts, len(sel_groups))
+    clf_parameters['wrapper']['n_concepts_protec_choices'] = {'cav': len(sel_groups),
                                                               'bias_space': n_protected_concepts}
 
     for key in clf_param_dict:
@@ -367,28 +355,28 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the number of training samples" % wrapper_params['n_concepts_unsup'])
                     continue
 
-                try:  # salsa might fail
-                    if use_cv:
-                        f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
-                            predictions, concepts, ep = eval_cv(dataset, emb_def_attr, g_def, group_match_lookup,
-                                                                sel_groups, groups_pie, attr_lbl, clf_head_lookup[clf],
-                                                                pipeline_lookup[clf], clf_params, wrapper_params,
-                                                                max_epochs)
-                    else:
-                        f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
-                            predictions, concepts, ep = train_eval_one_split(emb_train, y_train, g_train, emb_dev, y_dev, g_dev,
-                                                                             emb_test, y_test, g_test, emb_def_attr,
-                                                                             g_def, group_match_lookup, sel_groups,
-                                                                             groups_pie, attr_lbl,
-                                                                             clf_head_lookup[clf], pipeline_lookup[clf],
-                                                                             clf_params, wrapper_params, cw, max_epochs,
-                                                                             dataset.multi_label)
+                #try:  # salsa might fail
+                if use_cv:
+                    f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
+                        predictions, concepts, ep = eval_cv(dataset, emb_def_attr, g_def, group_match_lookup,
+                                                            sel_groups, groups_pie, attr_lbl, clf_head_lookup[clf],
+                                                            pipeline_lookup[clf], clf_params, wrapper_params,
+                                                            max_epochs)
+                else:
+                    f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
+                        predictions, concepts, ep = train_eval_one_split(emb_train, y_train, g_train, emb_dev, y_dev, g_dev,
+                                                                         emb_test, y_test, g_test, emb_def_attr,
+                                                                         g_def, group_match_lookup, sel_groups,
+                                                                         groups_pie, attr_lbl,
+                                                                         clf_head_lookup[clf], pipeline_lookup[clf],
+                                                                         clf_params, wrapper_params, cw, max_epochs,
+                                                                         dataset.multi_label)
 
-                    # save predictions (for CV concatenate all predictions):
-                    save_dict = {'predictions': predictions, 'concepts': concepts, 'groups_pie': pie_label}
-                    file_name = create_pred_savefile_name(pred_dir)
-                    with open(file_name, "wb") as handle:
-                        pickle.dump(save_dict, handle)
+                # save predictions (for CV concatenate all predictions):
+                save_dict = {'predictions': predictions, 'concepts': concepts, 'groups_pie': pie_label}
+                file_name = create_pred_savefile_name(pred_dir)
+                with open(file_name, "wb") as handle:
+                    pickle.dump(save_dict, handle)
                 #except RuntimeError as error:
                 #    print("learning failed for %s on %s" % (model_name, dataset_name))
                 #    print(error)
@@ -399,16 +387,16 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                 #    file_name = 'na'
                 #    sel_groups_pie = []  # no concept results will be written to the csv
                 #    groups_gt = []
-                except ValueError as error:
-                    print("learning failed for %s on %s" % (model_name, dataset_name))
-                    print(error)
-                    f1 = 0
-                    prec = 0
-                    rec = 0
-                    ep = 0
-                    file_name = 'na'
-                    sel_groups_pie = []  # no concept results will be written to the csv
-                    groups_gt = []
+                #except ValueError as error:
+                #    print("learning failed for %s on %s" % (model_name, dataset_name))
+                #    print(error)
+                #    f1 = 0
+                #    prec = 0
+                #    rec = 0
+                #    ep = 0
+                #    file_name = 'na'
+                #    sel_groups_pie = []  # no concept results will be written to the csv
+                #    groups_gt = []
 
                 hidden_size = -1
                 rf_n_estimators = -1
