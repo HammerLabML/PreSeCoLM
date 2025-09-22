@@ -364,28 +364,28 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     print("skip parameter set with n_concepts_unsup=%i, bc the number of concepts exceeds the number of training samples" % wrapper_params['n_concepts_unsup'])
                     continue
 
-                #try:  # salsa might fail
-                if use_cv:
-                    f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
-                        predictions, concepts, ep = eval_cv(dataset, emb_def_attr, g_def, group_match_lookup,
-                                                            sel_groups, groups_pie, attr_lbl, clf_head_lookup[clf],
-                                                            pipeline_lookup[clf], clf_params, wrapper_params,
-                                                            max_epochs)
-                else:
-                    f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
-                        predictions, concepts, ep = train_eval_one_split(emb_train, y_train, g_train, emb_dev, y_dev, g_dev,
-                                                                         emb_test, y_test, g_test, emb_def_attr,
-                                                                         g_def, group_match_lookup, sel_groups,
-                                                                         groups_pie, attr_lbl,
-                                                                         clf_head_lookup[clf], pipeline_lookup[clf],
-                                                                         clf_params, wrapper_params, cw, max_epochs,
-                                                                         dataset.multi_label)
+                try:  # salsa might fail
+                    if use_cv:
+                        f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
+                            predictions, concepts, ep = eval_cv(dataset, emb_def_attr, g_def, group_match_lookup,
+                                                                sel_groups, groups_pie, attr_lbl, clf_head_lookup[clf],
+                                                                pipeline_lookup[clf], clf_params, wrapper_params,
+                                                                max_epochs)
+                    else:
+                        f1, prec, rec, corr, pval, aucs, pie_label, sel_groups_pie, groups_gt, \
+                            predictions, concepts, ep = train_eval_one_split(emb_train, y_train, g_train, emb_dev, y_dev, g_dev,
+                                                                            emb_test, y_test, g_test, emb_def_attr,
+                                                                            g_def, group_match_lookup, sel_groups,
+                                                                            groups_pie, attr_lbl,
+                                                                            clf_head_lookup[clf], pipeline_lookup[clf],
+                                                                            clf_params, wrapper_params, cw, max_epochs,
+                                                                            dataset.multi_label)
 
-                # save predictions (for CV concatenate all predictions):
-                save_dict = {'predictions': predictions, 'concepts': concepts, 'groups_pie': pie_label}
-                file_name = create_pred_savefile_name(pred_dir)
-                with open(file_name, "wb") as handle:
-                    pickle.dump(save_dict, handle)
+                    # save predictions (for CV concatenate all predictions):
+                    save_dict = {'predictions': predictions, 'concepts': concepts, 'groups_pie': pie_label}
+                    file_name = create_pred_savefile_name(pred_dir)
+                    with open(file_name, "wb") as handle:
+                        pickle.dump(save_dict, handle)
                 except RuntimeError as error:
                     print("learning failed for %s on %s" % (model_name, dataset_name))
                     print(error)
