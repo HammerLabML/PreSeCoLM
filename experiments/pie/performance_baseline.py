@@ -273,7 +273,8 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                 if clf == 'RandomForest':
                     rf_n_estimators = clf_params['n_estimators']
                 if 'LVQ' in clf:
-                    lvq_class = clf_params['lvq_class']
+                    if 'lvq_class' in clf_params:
+                        lvq_class = clf_params['lvq_class']
                     lvq_min_proto = clf_params['min_prototypes_per_class']
                     lvq_proto_ratio = clf_params['prototype_ratio']
                     lvq_max_ratio = clf_params['max_ratio']

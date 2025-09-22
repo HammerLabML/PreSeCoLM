@@ -338,7 +338,16 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
         # this classifier only handles multi-label datasets, but its base classes can be used
         # for single-label classification instead
         classifier_choices.remove('MultiLabelLVQ')
-        classifier_choices += clf_parameters['MultiLabelLVQ']['lvq_class']
+        for clf in clf_parameters['MultiLabelLVQ']['lvq_class']:
+            if clf in classifier_choices:
+                continue
+            params = []
+            for elem in clf_parameter_sets['MultiLabelLVQ']:
+                new_elem = copy.deepcopy(elem)
+                new_elem.pop('lvq_class', None)
+                params.append(new_elem)
+            clf_parameter_sets[clf] = params
+            classifier_choices.append(clf)
 
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
@@ -377,16 +386,16 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                 file_name = create_pred_savefile_name(pred_dir)
                 with open(file_name, "wb") as handle:
                     pickle.dump(save_dict, handle)
-                #except RuntimeError as error:
-                #    print("learning failed for %s on %s" % (model_name, dataset_name))
-                #    print(error)
-                #    f1 = 0
-                #    prec = 0
-                #    rec = 0
-                #    ep = 0
-                #    file_name = 'na'
-                #    sel_groups_pie = []  # no concept results will be written to the csv
-                #    groups_gt = []
+                except RuntimeError as error:
+                    print("learning failed for %s on %s" % (model_name, dataset_name))
+                    print(error)
+                    f1 = 0
+                    prec = 0
+                    rec = 0
+                    ep = 0
+                    file_name = 'na'
+                    sel_groups_pie = []  # no concept results will be written to the csv
+                    groups_gt = []
                 #except ValueError as error:
                 #    print("learning failed for %s on %s" % (model_name, dataset_name))
                 #    print(error)
@@ -409,7 +418,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                 if clf == 'RandomForest':
                     rf_n_estimators = clf_params['n_estimators']
                 if clf == 'LVQWithMultiLabelSupport':
-                    lvq_class = clf_params['lvq_class']
+                    if 'lvq_class' in clf_params:
+                        lvq_class = clf_params['lvq_class']
                     lvq_min_proto = clf_params['min_prototypes_per_class']
                     lvq_proto_ratio = clf_params['prototype_ratio']
                     lvq_max_ratio = clf_params['max_ratio']
