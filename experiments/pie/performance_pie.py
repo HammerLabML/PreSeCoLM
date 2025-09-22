@@ -396,16 +396,16 @@ def eval_all_clf_choices(results: pd.DataFrame, results_concepts: pd.DataFrame, 
                     file_name = 'na'
                     sel_groups_pie = []  # no concept results will be written to the csv
                     groups_gt = []
-                #except ValueError as error:
-                #    print("learning failed for %s on %s" % (model_name, dataset_name))
-                #    print(error)
-                #    f1 = 0
-                #    prec = 0
-                #    rec = 0
-                #    ep = 0
-                #    file_name = 'na'
-                #    sel_groups_pie = []  # no concept results will be written to the csv
-                #    groups_gt = []
+                except ValueError as error:
+                    print("learning failed for %s on %s" % (model_name, dataset_name))
+                    print(error)
+                    f1 = 0
+                    prec = 0
+                    rec = 0
+                    ep = 0
+                    file_name = 'na'
+                    sel_groups_pie = []  # no concept results will be written to the csv
+                    groups_gt = []
 
                 hidden_size = -1
                 rf_n_estimators = -1
