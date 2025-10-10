@@ -226,8 +226,10 @@ def run(config):
         batch_size_lookup = json.load(f)
 
     # make sure the directory for results exists
-    if not os.path.isdir(config['results_dir']):
-        os.makedirs(config['results_dir'])
+    results_path = config['results_path']
+    results_dir = results_path.replace(results_path.split('/')[-1], '')
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
 
     with open(config['label_match_config'], 'r') as ff:
         label_match_config = yaml.safe_load(ff)
@@ -238,7 +240,6 @@ def run(config):
                    "emb size", "protected concepts", "other concepts",
                    "lambda", "optimizer", "lr", "loss", "group (train)", "group (test)",
                    "Pearson R", "pvalue", "PR-AUC"]
-    results_path = config['results_dir'] + 'cbm_transfer_results.csv'
     if os.path.isfile(results_path):
         results = pd.read_csv(results_path)
     else:

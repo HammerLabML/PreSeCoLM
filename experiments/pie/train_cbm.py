@@ -85,6 +85,7 @@ def train_model(emb_train: np.ndarray, y_train: np.ndarray, g_train: np.ndarray,
     n_concepts = clf_params['n_concepts_protec'] + clf_params['n_concepts_unsup']
     clf_params['input_size'] = emb_train.shape[1]
 
+    print(wrapper_params)
     wrapper_params['optimizer'] = optimizer_lookup[wrapper_params['optimizer']]
     if multi_label:
         wrapper_params['criterion'] = criterion_lookup[wrapper_params['criterion']['multi-label']]
@@ -180,6 +181,9 @@ def training_wrapper(checkpoint_dir: pd.DataFrame, dataset_name: str, model_name
 
     print("clf parameters:")
     print(clf_parameters)
+
+    print("wrapper parameters:")
+    print(wrapper_parameters)
 
     assert n_concepts <= emb_dim
 
