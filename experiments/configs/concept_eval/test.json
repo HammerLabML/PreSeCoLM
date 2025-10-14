@@ -1,0 +1,46 @@
+{
+  "huggingface_models": [
+    "bert-base-uncased"
+  ],
+  "openai_models": [
+    "text-embedding-3-small"
+  ],
+  "pooling": [
+    "mean"
+  ],
+  "embedding_dir": "../../artifacts/embeddings/",
+  "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
+  "results_path": "experiments/results/concept_eval/results.csv",
+  "max_epochs": 50,
+  "datasets": [
+    {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"},
+    {"name": "bios-supervised", "local_dir": "../../data/bios_huggingface_merge.pkl"},
+    {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"},
+    {"name": "crows_pairs", "local_dir": null},
+    {"name": "stereoset", "local_dir": null}
+  ],
+  "classifier": {
+    "linear": {
+    },
+    "MLP2": {
+      "hidden_size_factor": [
+        0.6,
+        0.8,
+        1.0
+      ]
+    },
+    "wrapper": {
+      "optimizer": [
+        "Salsa"
+      ],
+      "criterion": {
+        "multi-label": ["BCEWithLogitsLoss"],
+        "single-label": ["CrossEntropyLoss"]
+      },
+      "lr": [
+        null
+      ],
+      "batch_size": 64
+    }
+  }
+}
