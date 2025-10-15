@@ -79,11 +79,12 @@ class SBICDataset(CustomDataset):
                             'bisexual', 'homosexual',
                             'christian', 'jewish', 'muslim/islam', 'religion',
                             'physical illness/ disorder', 'mental illness/ disorder', 'physical disability', 'mental disability', 'autism', 'disability',
-                            'overweight', 'children', 'minors', 'old people', 'bad looking',
+                            'overweight', 'children', 'minors', 'old people', 'bad looking', 'young',
                             'poor', 'political group', 'feminist', 'liberal', 'conservatives', 'activists', 'police',
                             'violence victims', 'sexual assault/harassment victims', 'holocaust victims', 'genocide victims', 'terrorism victims', 'shooting victims', 'accident/ natural disaster victims',
                             'african', 'european', 'american', 'arab', 'mexican', 'chinese', 'ethiopian', 'german', 'indian', 'japanese', 'pakistani', 'russian', 'saudis', 'southern', 'syrian',
-                            'blondes', 'catholic', 'immigrant', 'incest victims', 'kidnapping victims', 'minorities', 'murder victims', 'pregnant', 'priest', 'red hair', 'short people', 'slavery victims', 'war/ combat victims', 'young']
+                            'blondes', 'catholic', 'immigrant', 'incest victims', 'kidnapping victims', 'minorities', 'murder victims', 'pregnant', 'priest', 'red hair', 'short people', 'slavery victims', 'war/ combat victims'
+                            ]
 
         self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
 
@@ -95,6 +96,7 @@ class SBICDataset(CustomDataset):
         self.data[split] = df.loc[:, 'post'].to_list()
 
         mean_lbl = df.loc[:, ['mean_offensiveYN', 'mean_intentYN', 'mean_sexYN']].to_numpy()
+        # TODO: intentionally labeled as 0.5 = uncertain! -> just keep mean label and treat as regression?
         self.labels[split] = (mean_lbl > 0.5).astype('float64')
         # TODO: filter uncertain labels? around ~15% of samples are between 0.4 and 0.6
 
@@ -107,7 +109,7 @@ class SBICDataset(CustomDataset):
             ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
             df = merge_split(ds, local_dir)
             all_groups = []
-            for sample in df.loc[:,'mergedMinority']:
+            for sample in df.loc[:, 'mergedMinority']:
                 for group in sample:
                     if not group in all_groups:
                         all_groups.append(group)

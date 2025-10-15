@@ -79,6 +79,7 @@ def eval_cv(dataset: data_loader.CustomDataset, group_names: list, clf_class: to
     pvalues = []
     aucs = []
     epochs = []
+    group_weights = []
     for fold_id in range(dataset.n_folds):
         data_dict = dataset.get_cv_split(fold_id)
         X_train, emb_train, _, g_train, _, gw = data_dict['train']
@@ -92,15 +93,20 @@ def eval_cv(dataset: data_loader.CustomDataset, group_names: list, clf_class: to
                                                                   emb_test, g_test, group_names, clf_class,
                                                                   cur_clf_params, cur_wrapper_params, gw,
                                                                   max_epochs)
+        if np.isnan(cur_corrs).any():
+            # auc would be 0.5 in that case, set to nan, so it doesn't influence the mean result
+            cur_auc = [np.nan if np.isnan(r) else a for a, r in zip(cur_auc, cur_corrs)]
+
         rvalues.append(cur_corrs)
         pvalues.append(cur_pval)
         aucs.append(cur_auc)
         epochs.append(ep)
+        group_weights.append(gw)
 
     corrs = np.vstack(rvalues)
     ps = np.vstack(pvalues)
 
-    return np.mean(corrs, axis=0), np.mean(ps, axis=0), np.mean(aucs, axis=0), epochs
+    return np.nanmean(corrs, axis=0), np.nanmean(ps, axis=0), np.nanmean(aucs, axis=0), epochs, np.mean(group_weights, axis=0)
 
 
 def get_parameter_sets(choices_per_param: dict):
@@ -137,7 +143,7 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
     print("run experiment for dataset %s" % (dataset_name))
 
     # we apply CV for (small) datasets that do not provide a train-test split
-    use_cv = (len(dataset.splits) == 1)
+
 
     # create list with classifier/ parameter configurations
     # add input and output size (matching the embedding size to clf parameters)
@@ -161,28 +167,13 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
     print("clf/ wrapper parameter sets:")
     print(clf_parameter_sets)
 
-    if not use_cv:
-        X_train, emb_train, _, g_train, _, gw = dataset.get_split('train')
-        X_dev, emb_dev, _, g_dev, _, _ = dataset.get_split('dev')
-        X_test, emb_test, _, g_test, _, gw_test = dataset.get_split('test')
-        g_train, groups, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_train)
-        g_dev, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_dev)
-        g_test, _, _ = utils.filter_group_labels(dataset.group_names, sel_groups, g_test)
-    else:
-        _, _, _, _, _, gw_test = dataset.get_split(dataset.splits[0])
-
     classifier_choices = [key for key in clf_parameters.keys() if key != 'wrapper']
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
             for wrapper_params in clf_parameter_sets['wrapper']:
                 try:  # salsa might fail
-                    if use_cv:
-                        corr, pval, aucs, ep = eval_cv(dataset, sel_groups, clf_head_lookup[clf],
-                                                       clf_params, wrapper_params, max_epochs)
-                    else:
-                        corr, pval, aucs, ep = train_eval_one_split(emb_train, g_train, emb_dev, g_dev, emb_test,
-                                                                    g_test, sel_groups, clf_head_lookup[clf],
-                                                                    clf_params, wrapper_params, gw, max_epochs)
+                    corr, pval, aucs, ep, weights = eval_cv(dataset, sel_groups, clf_head_lookup[clf],
+                                                            clf_params, wrapper_params, max_epochs)
 
                 except ValueError as error:
                     print("learning failed for %s on %s  (ValueError)" % (model_name, dataset_name))
@@ -200,19 +191,26 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
                 loss_fct = list(criterion_lookup.keys())[list(criterion_lookup.values()).index(wrapper_params['criterion'])]
                 emb_dim = dataset.data_preprocessed[dataset.splits[0]].shape[1]
 
-                # results (mean weighted/ unweighted by group support)
-                aucs_wm = np.sum([aucs[i]*gw_test[i] for i in range(len(aucs))]) / np.sum(gw_test)
+                # results (mean / mean weighted by group support/ mean of statistical significant results)
+                aucs_wm = np.sum([aucs[i]*weights[i] for i in range(len(aucs))]) / np.sum(weights)
+                aucs_sm = np.mean([aucs[i] for i in range(len(aucs)) if pval[i] < 0.05])
                 aucs_m = np.mean(aucs)
-                corr_wm = np.sum([corr[i]*gw_test[i] for i in range(len(corr))]) / np.sum(gw_test)
-                corr_m = np.mean(corr)
-                pval_wm = np.sum([pval[i] * gw_test[i] for i in range(len(pval))]) / np.sum(gw_test)
-                pval_m = np.mean(pval)
+                corr_wm = np.sum([corr[i]*weights[i] for i in range(len(corr))]) / np.sum(weights)
+                corr_sm = np.mean([corr[i] for i in range(len(corr)) if pval[i] < 0.05])
+                corr_m = np.nanmean(corr)
+                pval_wm = np.sum([pval[i] * weights[i] for i in range(len(pval))]) / np.sum(weights)
+                pval_sm = np.mean([pval[i] for i in range(len(pval)) if pval[i] < 0.05])
+                pval_m = np.nanmean(pval)
+
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture,
                                                    pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
-                                                   loss_fct, "mean", corr_m, pval_m, aucs_m, ep]
+                                                   loss_fct, "mean", corr_m, pval_m, aucs_m, str(ep)]
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture,
                                                    pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
-                                                   loss_fct, "weighted mean", corr_wm, pval_wm, aucs_wm, ep]
+                                                   loss_fct, "weighted mean", corr_wm, pval_wm, aucs_wm, str(ep)]
+                results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture,
+                                                   pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
+                                                   loss_fct, "mean (p < 0.05)", corr_sm, pval_sm, aucs_sm, str(ep)]
 
                 # results (one row for each protected group)
                 for i, group in enumerate(sel_groups):
