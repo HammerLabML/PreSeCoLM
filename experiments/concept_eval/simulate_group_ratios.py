@@ -206,7 +206,7 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
 
                 results.loc[len(results.index)] = [dataset_name, model_name, model_type, model_architecture,
                                                    pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
-                                                   loss_fct, sel_group, group_ratio, corr[0], pval[0], aucs[0], ep]
+                                                   loss_fct, sel_group, group_ratio, corr[0], pval[0], aucs[0], str(ep)]
 
     print("save results for setup: %s, %s, %s" % (dataset_name, model_name, sel_group))
     results.to_csv(results_path, index=False)
