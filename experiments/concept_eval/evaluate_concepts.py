@@ -134,16 +134,12 @@ def eval_all_clf_choices(results: pd.DataFrame, dataset_name: str, model_name: s
     For one dataset and Backbone (model name + pooling) run the evaluation for all clf architecture and parameter
     choices.
     """
-
     model_type, model_architecture = utils.get_model_type_architecture(model_name)
     dataset = utils.get_dataset_with_embeddings(emb_dir, dataset_name, model_name, pooling, batch_size, local_dir)
     sel_groups = dataset.group_names
     n_protected_concepts = len(sel_groups)
     print(sel_groups)
-    print("run experiment for dataset %s" % (dataset_name))
-
-    # we apply CV for (small) datasets that do not provide a train-test split
-
+    print("run experiment for dataset %s" % dataset_name)
 
     # create list with classifier/ parameter configurations
     # add input and output size (matching the embedding size to clf parameters)
