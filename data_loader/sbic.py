@@ -63,7 +63,7 @@ def merge_split(ds, local_dir):
 
 class SBICDataset(CustomDataset):
 
-    def __init__(self, local_dir: str = None):
+    def __init__(self, local_dir: str = None, option: str = 'all'):
         super().__init__(local_dir)
 
         self.name = 'sbic'
@@ -88,6 +88,10 @@ class SBICDataset(CustomDataset):
 
         self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
 
+        # all: keep all samples
+        # offensive: test set only contains offensive samples (where targets have been labeled)
+        self.option = option 
+
         print("load SBIC with local file: %s" % local_dir)
         self.load(local_dir)
         self.prepare()
@@ -108,12 +112,16 @@ class SBICDataset(CustomDataset):
         for split in ['train', 'test', 'validation']:
             ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
             df = merge_split(ds, local_dir)
+
+            if self.option == 'offensive' and split == 'test':
+                df = df[df['mean_offensiveYN'] > 0]
+
             all_groups = []
             for sample in df.loc[:, 'mergedMinority']:
                 for group in sample:
                     if not group in all_groups:
                         all_groups.append(group)
-            print(all_groups)
+            #print(all_groups)
             if split == 'validation':
                 split = 'dev'
             self._set_split(df, split)

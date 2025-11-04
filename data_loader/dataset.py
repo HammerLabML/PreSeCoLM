@@ -23,7 +23,7 @@ def label2onehot(y, minv=0, maxv=None):
     return onehot.astype('float')
 
 
-def compute_class_weights(y_train: np.ndarray, classes: list, min_samples=5):
+def compute_class_weights(y_train: np.ndarray, classes: list, min_samples=5, verbose=False):
     # compute positive class weights (based on training data)
     samples_per_class = {lbl: np.sum(y_train[:, i]) for i, lbl in enumerate(classes)}
     n_samples = y_train.shape[0]
@@ -31,11 +31,13 @@ def compute_class_weights(y_train: np.ndarray, classes: list, min_samples=5):
     class_weights = np.asarray([((n_samples - samples_per_class[lbl]) / samples_per_class[lbl])
                                 if samples_per_class[lbl] >= min_samples else 0 for lbl in classes])
 
-    print(samples_per_class)
-    print(class_weights)
+    if verbose:
+        print(samples_per_class)
+        print(class_weights)
 
     for lbl in classes:  # need to verify after filtering!
-        print("warning: got no samples for class %s" % lbl)
+        if samples_per_class[lbl] < 0:
+            print("warning: got no samples for class %s" % lbl)
 #        assert samples_per_class[lbl] > 0, "no samples for class %s" % lbl
     return class_weights
 

@@ -11,7 +11,7 @@ class WinoQueer(CustomDataset):
         self.name = 'winoqueer'
         self.group_names = []
 
-        print("load winoqueer")
+        print('load winoqueer')
         self.load(local_dir)
         self.prepare()
 

@@ -4,118 +4,114 @@ import datasets
 import numpy as np
 import itertools
 
-# TODO: remove unless needed here too
-def merge_minority_lists(series):
-    all_items = set()
-    for sublist in series.dropna():
-        items = str(sublist).split(',')
-        all_items.update([item.strip() for item in items])
-    return ', '.join(sorted(all_items))
+SEL_GROUPS = ["female", "male", "homosexual", "lgbtq+", 
+              "latino/latina", "middle eastern", "asian", "non-white", "white", "black",
+              "progressive", "conservative", "liberal",
+              "illegal", "immigrant", "minorities", 
+              "jewish", "muslim/islam", "religion"
+]
+NEGATIVE_CLASS = "not_hate"
 
-# TODO: similar function for merging the ImplicitHate dataset
-# TODO: pass all dataframes for the current split (als pandas dataframe)
-def merge_split(ds, local_dir):
-    df = pd.DataFrame(ds)
 
-    # Convert the annotation columns to numeric
-    for col in ['offensiveYN', 'intentYN', 'sexYN']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')  # Convert to float, NaNs if conversion fails
+def load_and_merge(local_dir: str, verbose: bool = False):
+    # assuming the structure from the downloaded zip file (tsv files)
+    # and the merge group lookup csv file in the same directory
+    stage1_file = local_dir + 'implicit_hate_v1_stg1_posts.tsv'
+    stage2_file = local_dir + 'implicit_hate_v1_stg2_posts.tsv'
+    stage3_file = local_dir + 'implicit_hate_v1_stg3_posts.tsv'
+    group_lookup_file = local_dir + 'merged_group_lookup.csv'
 
-    # Compute mean values per HITId
-    mean_df = df.groupby('HITId')[['offensiveYN', 'intentYN', 'sexYN']].transform('mean')
+    stage1 = pd.read_csv(stage1_file, sep='\t')
+    stage2 = pd.read_csv(stage2_file, sep='\t')
+    stage3 = pd.read_csv(stage3_file, sep='\t')
+    lookup = pd.read_csv(group_lookup_file, sep=',')
 
-    # Compute merged targetMinority per HITId
-    df['merged_targetMinority'] = df.groupby('HITId')['targetMinority'].transform(merge_minority_lists)
+    # create dataframe for merge
+    merged = stage1.copy()
+    merged['implicit_class'] = ''
+    merged['extra_implicit_class'] = ''
+    merged['target raw'] = ''
+    merged['implied_statement'] = ''
+    merged['target merged'] = ''
 
-    # Add the mean columns back to the original DataFrame
-    df['mean_offensiveYN'] = mean_df['offensiveYN']
-    df['mean_intentYN'] = mean_df['intentYN']
-    df['mean_sexYN'] = mean_df['sexYN']
+    # merge implicit class
+    for i in range(len(stage2)):
+        stage2_row = stage2.iloc[i]
+        merged.loc[merged['post'] == stage2_row['post'], 'implicit_class'] = stage2_row['implicit_class']
+        if pd.notna(stage2_row['extra_implicit_class']):
+            merged.loc[merged['post'] == stage2_row['post'], 'extra_implicit_class'] = stage2_row['extra_implicit_class']
 
-    # Load overview data
-    overview_df = pd.read_csv(local_dir)
+    # merge target groups
+    all_groups = {}
+    for i in range(len(stage3)):
+        stage3_row = stage3.iloc[i]
+        merged.loc[merged['post'] == stage3_row['post'], 'implied_statement'] = stage3_row['implied_statement']
 
-    # Make sure both columns are strings
-    overview_df['targetMinority'] = overview_df['targetMinority'].astype(str)
-    overview_df['mergedMinority'] = overview_df['mergedMinority'].astype(str)
-
-    # Mapping dictionary: targetMinority -> mergedMinority
-    minority_map = dict(zip(overview_df['targetMinority'], overview_df['mergedMinority']))
-
-    # Function to map multiple targetMinorities to mergedMinority values
-    def map_merged_minorities(targets):
-        if pd.isna(targets):
-            return ''
-        groups = [grp.strip() for grp in str(targets).split(', ')]
-        merged = [minority_map.get(g, '').split(', ') for g in groups]
-        merged = list(itertools.chain.from_iterable(merged))
-        if 'nan' in merged:
-            merged.remove('nan')
-        return list(set(merged))
-
-    # Apply mapping function
-    df['mergedMinority'] = df['merged_targetMinority'].apply(map_merged_minorities)
-
-    merged = df.groupby('HITId', as_index=False)[
-        ['post', 'mean_offensiveYN', 'mean_intentYN', 'mean_sexYN', 'mergedMinority']].first()
+        if pd.notna(stage3_row['target']):
+            target = str(stage3_row['target']).lower()
+            merged.loc[merged['post'] == stage3_row['post'], 'target raw'] = target
+            lookup_filt = lookup[lookup['target_normalized'] == target]
+            if len(lookup_filt) != 1:
+                print(len(lookup_filt), target)
+            else:
+                group_lbl = str(lookup_filt.loc[lookup_filt.index[0],'mergedMinority'])
+                if group_lbl == 'nan':
+                    continue
+                merged.loc[merged['post'] == stage3_row['post'], 'target merged'] = group_lbl
+                groups = group_lbl.replace(', ', ',').split(',')
+                for grp in groups:
+                    if grp in all_groups.keys():
+                        all_groups[grp] += 1
+                    else:
+                        all_groups[grp] = 1
+    
+    if verbose:
+        print("protected groups")
+        print(all_groups)
 
     return merged
+    
 
+class ImplicitHate(CustomDataset):
 
-class ImplicitHateDataset(CustomDataset):
-
-    def __init__(self, local_dir: str = None):
+    def __init__(self, local_dir: str = None, option: str = 'all'):
         super().__init__(local_dir)
 
         self.name = 'implicit_hate'
-        
-        # TODO: specify all groups to be labeled in the dataset (this can be any subset of merged groups for now)
-        self.group_names = ['white', 'black', 'asian']
+        self.group_names = SEL_GROUPS
+        self.class_names = []
+        self.option = option # all: use all samples, positive-only: only positive samples (implicit hate)
 
-        # TODO: adapt class names for implicitHate
-        self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
-
-
-        print("Loading Implicit Hate dataset from:", local_dir)
+        print("Loading Implicit Hate dataset with option %s from: %s" % (option, local_dir))
         self.load(local_dir)
         self.prepare()
 
-    def _set_split(self, df, split):
-        self.data[split] = df['post'].to_list() # TODO column name for text
+    def load(self, local_dir=None, verbose=False):
+        df = load_and_merge(local_dir, verbose)
 
-        # TODO: take the correct column names for the labels
-        labels = df[self.class_names].to_numpy()
-        self.labels[split] = (labels > 0.5).astype('float64')
+        if self.option == 'positive-only':
+            df = df[df['class'] != NEGATIVE_CLASS]
+        
+        # using major class (hate / not hate) and implicit classes
+        self.class_names = list(set(df['class'])) + list(set(df['implicit_class']))
+        self.class_names.remove('')
 
-	# TODO: check column name
-        self.protected_groups[split] = np.zeros((len(df), len(self.group_names)))
-        for i, group in enumerate(self.group_names):
-            self.protected_groups[split][:, i] = df['mergedMinority'].apply(
-                lambda x: 1 if group in str(x).lower() else 0
-            ).astype('float64')
+        self.data['test'] = list(df['post'])
+        self.labels['test'] = np.zeros((len(df), len(self.class_names)))
+        self.protected_groups['test'] = np.zeros((len(df), len(self.group_names)))
 
-    def load(self, local_dir=None):
-        for split in ['train', 'test', 'validation']: # whatever the splits are called in the filenames
-            # TODO: read the csv files for the current split from disk (the original files that we downloaded)
-            # in the 'merge_splits' function the files should be merged (text + labels + mergedMinority into one dataframe)
-            # if necessary uncomment these preprocessing lines
-            # Ensure label columns are numeric
-            for col in self.class_names:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-            df = df.dropna(subset=self.class_names + ['post', 'mergedMinority'])
-	    
-	    # TODO: similar to the following lines call merge_split with all the dataframes of the current split
-            df = merge_split(ds, local_dir)
-            all_groups = []
-            for sample in df.loc[:,'mergedMinority']:
-                for group in sample:
-                    if not group in all_groups:
-                        all_groups.append(group)
-            print(all_groups) # just to see what groups are labeled in the data -> copy to self.group_names
+        for i, idx in enumerate(df.index):
+            # major label (hate / not hate)
+            self.labels['test'][i, self.class_names.index(df.loc[idx, 'class'])] = 1
 
-            # possibly rename split
-            if split == 'validation':
-                split = 'dev'
+            # implicit class labels
+            if pd.notna(df.loc[idx, 'implicit_class']) and df.loc[idx, 'implicit_class'] != '':
+                self.labels['test'][i, self.class_names.index(df.loc[idx, 'implicit_class'])] = 1
+            if pd.notna(df.loc[idx, 'extra_implicit_class']) and df.loc[idx, 'extra_implicit_class'] != '':
+                self.labels['test'][i, self.class_names.index(df.loc[idx, 'extra_implicit_class'])] = 1
 
-            # at this point the splits should be named: 'train', 'test' or 'dev'
-            self._set_split(df, split)
+            # protected groups
+            groups = df.loc[idx, 'target merged']
+            for group in groups.replace(', ', ',').split(','):
+                if group in self.group_names:
+                    self.protected_groups['test'][i, self.group_names.index(group)] = 1
