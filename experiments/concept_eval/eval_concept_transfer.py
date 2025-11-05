@@ -63,7 +63,8 @@ def train_evaluate_indomain(dataset_train, clf_class, cur_clf_params: dict, cur_
 
     # get training and validation split from the training dataset
     if len(dataset_train.splits) == 1:  # test set only
-        _, emb_train, _, g_train, _, gw = dataset_train.get_split('test')
+        split_name = dataset_train.splits[0]
+        _, emb_train, _, g_train, _, gw = dataset_train.get_split(split_name)
         emb_train, emb_test, g_train, g_test = train_test_split(emb_train, g_train, test_size=0.2)
         emb_train, emb_val, g_train, g_val = train_test_split(emb_train, g_train, test_size=0.1)
     else:  # presumably train, dev, test split
@@ -231,7 +232,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_path: str, dataset_train
                         pred_test_id_lookup = test_setup['pred_test_id_lookup']
 
                         # load test dataset and get test split
-                        _, emb_test_t, _, g_test_t, _, _ = dataset_test.get_split('test')
+                        test_split_name = 'test' if 'test' len(dataset_test.splits) > 1 else: dataset_test.splits[0]
+                        _, emb_test_t, _, g_test_t, _, _ = dataset_test.get_split(test_split_name)
                         aucs_transfer = evaluate(clf_wrapper, emb_test_t, g_test_t, pred_test_id_lookup)
 
                         # log results for transfer
