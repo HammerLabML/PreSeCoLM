@@ -232,7 +232,7 @@ def eval_all_clf_choices(results: pd.DataFrame, results_path: str, dataset_train
                         pred_test_id_lookup = test_setup['pred_test_id_lookup']
 
                         # load test dataset and get test split
-                        test_split_name = 'test' if 'test' len(dataset_test.splits) > 1 else: dataset_test.splits[0]
+                        test_split_name = 'test' if 'test' len(dataset_test.splits) > 1 else dataset_test.splits[0]
                         _, emb_test_t, _, g_test_t, _, _ = dataset_test.get_split(test_split_name)
                         aucs_transfer = evaluate(clf_wrapper, emb_test_t, g_test_t, pred_test_id_lookup)
 
