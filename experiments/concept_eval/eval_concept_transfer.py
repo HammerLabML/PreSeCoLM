@@ -172,7 +172,6 @@ def eval_all_clf_choices(results: pd.DataFrame, results_path: str, dataset_train
                             results_missing = True
             if results_missing:
                 setup = test_setup.copy()
-                setup['dataset'] = dataset_test
                 setup['shared_lbl'] = shared_lbl
                 setup['pred_test_id_lookup'] = pred_test_id_lookup
                 matching_test_setups.append(setup)
@@ -227,7 +226,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_path: str, dataset_train
                     if are_results_missing(results, key_param_dict):
                         print("run experiment for %s -> %s %s %s" % (dataset_train.name, test_setup['name'],
                                                                      model_name, pooling))
-                        dataset_test = test_setup['dataset']
+                        dataset_test = utils.get_dataset_with_embeddings(emb_dir, test_setup['name'], model_name,
+                                                                         pooling, batch_size, test_setup['local_dir'])
                         shared_lbl = test_setup['shared_lbl']
                         pred_test_id_lookup = test_setup['pred_test_id_lookup']
 
@@ -320,6 +320,8 @@ def run(config):
                 eval_all_clf_choices(results, results_path, dataset_train, test_setups, model, pool, batch_size,
                                      config['embedding_dir'], config['classifier'], config['max_epochs'], lm_emb_size,
                                      label_match_config)
+
+                del dataset_train
 
 
 def main(argv):
