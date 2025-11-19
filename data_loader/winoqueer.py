@@ -29,7 +29,7 @@ class WinoQueer(CustomDataset):
 
         self.data['test'] = []
         self.labels['test'] = []
-        self.protected_groups['test'] = np.zeros((n_sent, n_groups))
+        self.protected_groups['test'] = np.zeros((n_sent, n_groups), dtype=float)
 
         for i in range(len(df)):
             # queer version
@@ -45,4 +45,4 @@ class WinoQueer(CustomDataset):
             self.protected_groups['test'][i*2+1, self.group_names.index(group)] = 1
 
             
-        self.labels['test'] = np.asarray(self.labels['test']).reshape(-1, 1)
+        self.labels['test'] = np.asarray(self.labels['test']).reshape(-1, 1).astype(float)

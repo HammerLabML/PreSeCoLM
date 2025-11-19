@@ -97,8 +97,8 @@ class ImplicitHate(CustomDataset):
         self.class_names.remove('')
 
         self.data['test'] = list(df['post'])
-        self.labels['test'] = np.zeros((len(df), len(self.class_names)))
-        self.protected_groups['test'] = np.zeros((len(df), len(self.group_names)))
+        self.labels['test'] = np.zeros((len(df), len(self.class_names)), dtype=float)
+        self.protected_groups['test'] = np.zeros((len(df), len(self.group_names)),dtype=float)
 
         for i, idx in enumerate(df.index):
             # major label (hate / not hate)
