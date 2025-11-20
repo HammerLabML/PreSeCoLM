@@ -28,7 +28,7 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir):
         embeddings = lm.embed(texts)
         with open(save_file, 'wb') as handle:
             pickle.dump(embeddings, handle)
-    return embeddings
+    return embeddings.astype(np.float32)
 
 
 def get_pretrained_model(model_name, n_classes, batch_size=1, pooling='mean', multi_label=False):
