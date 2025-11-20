@@ -252,10 +252,6 @@ def evaluate_bias_space(defining_term_dict, dataset_test, model, pooling, batch_
 
 
 def run(config):
-    # prepare directory where results will be saved
-    if not os.path.isdir(config['results_dir']):
-        os.makedirs(config['results_dir'])
-
     # language models
     openai_models = config["openai_models"]
     huggingface_models = config["huggingface_models"]
