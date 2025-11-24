@@ -175,10 +175,19 @@ def eval_all_clf_choices(results: pd.DataFrame, results_path: str, dataset_train
                 setup['shared_lbl'] = shared_lbl
                 setup['pred_test_id_lookup'] = pred_test_id_lookup
                 matching_test_setups.append(setup)
+            else:
+                print("got results for %s -> %s" % (dataset_train.name, dataset_test.name))
+        else:
+            print("too few shared labels for %s -> %s:" % (dataset_train.name, dataset_test.name))
+            print(shared_lbl)
 
     if len(matching_test_setups) == 0:
         print("nothing to do for %s %s %s" % (dataset_train.name, model_name, pooling))
+        print("test setups for ", dataset_train.name, ":", dataset_test_setups)
         return
+    else:
+        print("got matching test setups for ", dataset_train.name)
+        print(matching_test_setups)
 
     for clf in classifier_choices:
         for clf_params in clf_parameter_sets[clf]:
@@ -250,6 +259,8 @@ def eval_all_clf_choices(results: pd.DataFrame, results_path: str, dataset_train
                             results.loc[len(results.index)] = [dataset_train.name, dataset_test.name, model_name, model_type, model_architecture,
                                                                pooling, clf, hidden_size, emb_dim, optim, wrapper_params['lr'],
                                                                loss_fct, group, aucs_transfer[i]]
+                    else:
+                        print("found results for %s -> %s %s %s" % (dataset_train.name, test_setup['name'], model_name, pooling))
 
                 print("save results for setup: %s, %s, %s, %s" % (dataset_train.name, model_name, pooling, clf))
                 results.to_csv(results_path, index=False)
