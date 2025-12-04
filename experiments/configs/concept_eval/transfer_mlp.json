@@ -1,0 +1,53 @@
+{
+  "huggingface_models": [
+    "microsoft/deberta-v3-large",
+    "albert-large-v2",
+    "EleutherAI/pythia-410m",
+    "meta-llama/Llama-3.2-1B",
+    "deepseek-ai/deepseek-llm-7b-base",
+    "deepseek-ai/deepseek-llm-7b-chat",
+    "xlnet/xlnet-large-cased",
+    "albert-base-v2",
+    "roberta-large"
+  ],
+  "openai_models": [
+  ],
+  "pooling": [
+    "mean"
+  ],
+  "embedding_dir": "/vol/saschroeder_embeddings/",
+  "batch_size_lookup": "experiments/configs/batch_size_lookup_A40.json",
+  "results_path": "experiments/results/concept_eval/exp_transfer_mlp.csv",
+  "label_match_config": "experiments/configs/concept_eval/label_matches_complete.yaml",
+  "max_epochs": 50,
+  "datasets": [
+    {"name": "implicit_hate", "local_dir": "../datasets/implicit-hate-corpus/"},
+    {"name": "winoqueer", "local_dir": "../datasets/winoqueer_final.csv"},
+    {"name": "twitterAAE", "local_dir": null},
+    {"name": "sbic", "local_dir": "../datasets/filtered_sbic_minority_overview.csv"},
+    {"name": "bios-supervised", "local_dir": "../datasets/bios_huggingface_merge.pkl"},
+    {"name": "jigsaw", "local_dir": "../jigsaw_bias"},
+    {"name": "crows_pairs", "local_dir": null},
+    {"name": "stereoset", "local_dir": null}
+  ],
+  "classifier": {
+    "MLP2": {
+      "hidden_size_factor": [
+        1.0
+      ]
+    },
+    "wrapper": {
+      "optimizer": [
+        "Salsa"
+      ],
+      "criterion": {
+        "multi-label": ["BCEWithLogitsLoss"],
+        "single-label": ["CrossEntropyLoss"]
+      },
+      "lr": [
+        null
+      ],
+      "batch_size": 64
+    }
+  }
+}
