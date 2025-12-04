@@ -1,0 +1,129 @@
+from .dataset import CustomDataset
+import pandas as pd
+import datasets
+import numpy as np
+import itertools
+
+
+def merge_minority_lists(series):
+    all_items = set()
+    for sublist in series.dropna():
+        items = str(sublist).split(',')
+        all_items.update([item.strip() for item in items])
+    return ', '.join(sorted(all_items))
+
+
+def merge_split(ds, local_dir):
+    df = pd.DataFrame(ds)
+
+    # Convert the annotation columns to numeric
+    for col in ['offensiveYN', 'intentYN', 'sexYN']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')  # Convert to float, NaNs if conversion fails
+
+    # Compute mean values per HITId
+    mean_df = df.groupby('HITId')[['offensiveYN', 'intentYN', 'sexYN']].transform('mean')
+
+    # Compute merged targetMinority per HITId
+    df['merged_targetMinority'] = df.groupby('HITId')['targetMinority'].transform(merge_minority_lists)
+
+    # Add the mean columns back to the original DataFrame
+    df['mean_offensiveYN'] = mean_df['offensiveYN']
+    df['mean_intentYN'] = mean_df['intentYN']
+    df['mean_sexYN'] = mean_df['sexYN']
+
+    # Load overview data
+    overview_df = pd.read_csv(local_dir)
+
+    # Make sure both columns are strings
+    overview_df['targetMinority'] = overview_df['targetMinority'].astype(str)
+    overview_df['mergedMinority'] = overview_df['mergedMinority'].astype(str)
+
+    # Mapping dictionary: targetMinority -> mergedMinority
+    minority_map = dict(zip(overview_df['targetMinority'], overview_df['mergedMinority']))
+
+    # Function to map multiple targetMinorities to mergedMinority values
+    def map_merged_minorities(targets):
+        if pd.isna(targets):
+            return ''
+        groups = [grp.strip() for grp in str(targets).split(', ')]
+        merged = [minority_map.get(g, '').split(', ') for g in groups]
+        merged = list(itertools.chain.from_iterable(merged))
+        if 'nan' in merged:
+            merged.remove('nan')
+        return list(set(merged))
+
+    # Apply mapping function
+    df['mergedMinority'] = df['merged_targetMinority'].apply(map_merged_minorities)
+
+    merged = df.groupby('HITId', as_index=False)[
+        ['post', 'mean_offensiveYN', 'mean_intentYN', 'mean_sexYN', 'mergedMinority']].first()
+
+    return merged
+
+
+class SBICDataset(CustomDataset):
+
+    def __init__(self, local_dir: str = None, option: str = 'all'):
+        super().__init__(local_dir)
+
+        self.name = 'sbic'
+        # these groups do not appear in all splits:
+        # hetero, mormon, cis, hindu, asexual, feminists, pagan/atheist, blind, ...
+
+        # very rare (<0.1% in test data):
+        # mixed race, non-binary, autism, activists, police, accident/ natural disaster, german, japanese, pakistani,
+        # russian, saudis, southern, syrian, blondes, catholic, incest victims, kidnapping victims, murder victims,
+        # pregnant, priest, red hair, short people, slavery victims, war/combat victims
+        self.group_names = ['white', 'black', 'asian', 'non-white', 'latin-american', 'hispanic', 'mixed race', 'middle eastern', 'indigenous', 'race',
+                            'male', 'female', 'non-binary', 'trans', 'lgbtq+',
+                            'bisexual', 'homosexual',
+                            'christian', 'jewish', 'muslim/islam', 'religion',
+                            'physical illness/ disorder', 'mental illness/ disorder', 'physical disability', 'mental disability', 'autism', 'disability',
+                            'overweight', 'children', 'minors', 'old people', 'bad looking', 'young',
+                            'poor', 'political group', 'feminist', 'liberal', 'conservatives', 'activists', 'police',
+                            'violence victims', 'sexual assault/harassment victims', 'holocaust victims', 'genocide victims', 'terrorism victims', 'shooting victims', 'accident/ natural disaster victims',
+                            'african', 'european', 'american', 'arab', 'mexican', 'chinese', 'ethiopian', 'german', 'indian', 'japanese', 'pakistani', 'russian', 'saudis', 'southern', 'syrian',
+                            'blondes', 'catholic', 'immigrant', 'incest victims', 'kidnapping victims', 'minorities', 'murder victims', 'pregnant', 'priest', 'red hair', 'short people', 'slavery victims', 'war/ combat victims'
+                            ]
+
+        self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
+
+        # all: keep all samples
+        # offensive: test set only contains offensive samples (where targets have been labeled)
+        self.option = option 
+
+        print("load SBIC with local file: %s" % local_dir)
+        self.load(local_dir)
+        self.prepare()
+
+    def _set_split(self, df, split):
+        self.data[split] = df.loc[:, 'post'].to_list()
+
+        mean_lbl = df.loc[:, ['mean_offensiveYN', 'mean_intentYN', 'mean_sexYN']].to_numpy()
+        # TODO: intentionally labeled as 0.5 = uncertain! -> just keep mean label and treat as regression?
+        self.labels[split] = (mean_lbl > 0.5).astype('float64')
+        # TODO: filter uncertain labels? around ~15% of samples are between 0.4 and 0.6
+
+        self.protected_groups[split] = np.zeros((len(df), len(self.group_names)))
+        for i, label in enumerate(self.group_names):
+            self.protected_groups[split][:, i] = df['mergedMinority'].apply(lambda x: 1 if label in x else 0).astype('float64')
+
+    def load(self, local_dir=None):
+        for split in ['train', 'test', 'validation']:
+            ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
+            df = merge_split(ds, local_dir)
+
+            if self.option == 'offensive' and split == 'test':
+                df = df[df['mean_offensiveYN'] > 0]
+
+            all_groups = []
+            for sample in df.loc[:, 'mergedMinority']:
+                for group in sample:
+                    if not group in all_groups:
+                        all_groups.append(group)
+            #print(all_groups)
+            if split == 'validation':
+                split = 'dev'
+            self._set_split(df, split)
+
+

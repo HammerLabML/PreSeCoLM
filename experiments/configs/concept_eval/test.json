@@ -1,0 +1,46 @@
+{
+  "huggingface_models": [
+    "bert-base-uncased"
+  ],
+  "openai_models": [
+    "text-embedding-3-small"
+  ],
+  "pooling": [
+    "mean"
+  ],
+  "embedding_dir": "../../artifacts/embeddings/",
+  "batch_size_lookup": "experiments/configs/batch_size_lookup_1080.json",
+  "label_match_config": "experiments/configs/concept_transfer/label_matches.yaml",
+  "results_path": "experiments/results/concept_eval/results_transfer.csv",
+  "max_epochs": 50,
+  "datasets": [
+    {"name": "sbic", "local_dir": "../../data/filtered_sbic_minority_overview.csv"},
+    {"name": "jigsaw", "local_dir": "../../data/jigsaw_bias"}
+  ],
+  "sel_groups": ["male", "female", "trans", "homosexual", "white", "black", "latin-american", "hispanic",
+                 "transgender", "latino", "homosexual_gay_or_lesbian"
+                ],
+  "group_ratios": [0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5],
+  "classifier": {
+    "linear": {
+    },
+    "MLP2": {
+      "hidden_size_factor": [
+        1.0
+      ]
+    },
+    "wrapper": {
+      "optimizer": [
+        "Salsa"
+      ],
+      "criterion": {
+        "multi-label": ["BCEWithLogitsLoss"],
+        "single-label": ["CrossEntropyLoss"]
+      },
+      "lr": [
+        null
+      ],
+      "batch_size": 64
+    }
+  }
+}

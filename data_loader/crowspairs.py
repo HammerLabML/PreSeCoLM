@@ -1,25 +1,25 @@
-import difflib
-import string
+import datasets
 import numpy as np
 
-PUNCTUATION = string.punctuation.replace('-', '')
+from .dataset import CustomDataset
+from .helper import simplify_text
 
-GROUPS_BY_BIAS_TYPES = {"race-color": ["black", "white", "asian"],
-                        "socioeconomic": ["poor", "rich"],
-                        "gender": ["male", "female"],
-                        "sexual-orientation": ["homosexual", "heterosexual", "bisexual"],
-                        "religion": ["christian", "muslim", "jewish", "buddhist", "hindu"],
-                        "age": ["old", "young"],
-                        "physical-appearance": ["overweight", "underweight", "fit", "healthy", "tall", "short", "average_height", "good_looking", "bad_looking"],
-                        "disability": ["physical disability, sickness", "mental_disability_illness", "able bodied, non-stigmatized sickness", "mentally fit, neurotypical", "physically fit, gifted", "mentally gifted"],
-                        "nationality": ["citizen", "foreigner, immigrant, undocumented", "iraq", "canadian", "british", "mexican", "us american", "russian", "polish", "armenian", "italian", "nigerian", "greek", "vietnamese", "irish", "chinese", "indian", "japanese", "saudi arabian", "australian", "dutch", "mongolian", "korean", "syrian", "kenyan", "swedish", "colombian", "pakistani", "thai", "german", "norwegian"]}
 
 TERMS_BY_GROUPS = {
     "black": ["black", "black people", "blacks", "african", "africans", "african-american", "african american", "afro-american", "african-americans", "african americans", "an afro-american", "african american", "african americans", "colored", "dark-skinned"],
     "white": ["white", "white people", "whites", "caucasian", "caucasians", "white american", "caucasian american", "anglo-american", "white americans", "caucasian americans", "a caucasian american", "anglo americans", "anglo american", "white", "light-skinned"],
-    "asian": ["asian", "asian people", "asians", "asian", "asians", "asian-american", "asian american", "asian-american", "asian-americans", "asian americans", "an asian-american", "asian american", "asian americans", "asian", "asian"],
+    "asian": ["asian", "asian people", "asians", "asian", "asians", "asian-american", "asian american", "asian-american", "asian-americans", "asian americans", "an asian-american", "asian american", "asian americans", "asian", "asian",
+              "vietnam", "vietnamese", "a vietnamese", "china", "chinese", "a chinese", "india", "indian", "indians", "an indian", "japan", "japanese", "a japanese", "mongolia", "mongolian", "mongolians", "a mongolian", "korea", "korean",
+              "koreans", "a korean", "pakistan", "pakistanti", "a pakistanti", "thailand", "thai", "a thai", "russia", "russian", "russians", "a russian", "armenia", "armenian", "armenians", "an armenian"],
 
-    "native american": ["native", "native american", "native americans"], "hispanic": ["latino", "latinos", "hispanic", "hispanics"],
+    "native american": ["native", "native american", "native americans"],
+    "hispanic": ["hispanic", "hispanics"],
+    "latino": ["latino", "latinos", "mexico", "mexican", "mexicans", "a mexican", "colombia", "colombian", "colombians", "a colombian"],
+    "african": ["nigeria", "nigerian", "nigerians", "a nigerian", "kenya", "kenyan", "kenyans", "a kenyan"],
+    "middle eastern": ["saudi arabia", "saudi arabian", "saudi arabians", "a saudi arabian", "syria", "syrian", "syrians", "a syrian"],
+    "european": ["great britian", "british", "english", "welsh", "scottish", "a brit", "an englishman", "a welsh", "a scotsman", "poland", "polish", "a polish", "italy", "italian", "italians", "an italian", "greece", "greek", "greeks",
+                 "a greek", "ireland", "irish", "irishman", "an irishman", "germany", "german", "germans", "a german", "norway", "norwegian", "norwegians", "a norwegian", "netherlands", "dutch", "dutchman", "a dutchman", "sweden", "swede",
+                 "swedish", "swedes", "a swede", "russia", "russian", "russians", "a russian"],
     # other ethnicities
 
     "poor": ["poor", "ghetto", "low income", "poverty stricken", "poverty", "low income", "trailer park", "welfare money", "on welfare", "homeless"],
@@ -42,6 +42,7 @@ TERMS_BY_GROUPS = {
 
     "old": ["old", "older", "an old", "oldest", "elderly", "senior", "adults", "adult"],
     "young": ["young", "younger", "a young", "youngest", "teenager", "children", "child", "junior"],
+    "minors": ["teenager", "children", "child"],
 
     "overweight": ["fat", "overweight", "obese", "morbidly obese", "an obese", "heavy", "fatties"],
     "underweight": ["very thin", "thin", "skinny", "slim", "light", "underweight"],
@@ -53,9 +54,13 @@ TERMS_BY_GROUPS = {
     "good_looking": ["beautiful", "cute", "handsome", "attractive"],
     "bad_looking": ["ugly", "hunchback", "disfigured"],
 
-    # TODO: reconsider these categories
-    "physical disability, sickness": ["wheelchair", "sickly", "disabled", "handicapped", "no legs", "hospital", "crippled", "a crippled", "paraplegic", "blind eye", "blind", "glasses", "aids"],
-    "mental_disability_illness": ["dyslexia", "retard", "retarded", "retards", "mentally ill", "autistic", "down syndrome", "demented", "alcoholic", "drug addict"],
+    "physical disability": ["wheelchair", "sickly", "disabled", "handicapped", "no legs", "hospital", "crippled",
+                            "a crippled", "paraplegic", "blind eye", "blind", "glasses"],
+    "physical illness": ["wheelchair", "sickly", "hospital", "crippled", "a crippled", "aids"],
+    "mental disability": ["dyslexia", "retard", "retarded", "retards", "autistic", "down syndrome"],
+    "mental illness": ["mentally ill", "demented", "alcoholic", "drug addict"],
+
+    # nationalities, some not-protected groups (as counterparts to disability)
     "able bodied, non-stigmatized sickness": ["healthy", "able-bodied", "able bodied", "all limbs", "able", "nondisabled", "of sound mind", "healthy man", "the cold"],
     "mentally fit, neurotypical": ["normal", "average iq", "mentally fit"],
     "physically fit, gifted": ["perfectly healthy", "athletic"],
@@ -63,85 +68,52 @@ TERMS_BY_GROUPS = {
 
     "citizen": ["a citizen", "citizen"],
     "foreigner, immigrant, undocumented": ["foreigner", "immigrants", "refugee", "undocumented", "illegals"],
-    "iraq": ["iraq", "iraqi", "an iraqui"],
+
     "canadian": ["canada", "canadian", "canadians", "a canadian"],
-    "british": ["great britian", "british", "english", "welsh", "scottish", "a brit", "an englishman", "a welsh", "a scotsman"],
     "mexican": ["mexico", "mexican", "mexicans", "a mexican"],
     "us american": ["american", "usa", "americans", "an american"],
-    "russian": ["russia", "russian", "russians", "a russian"],
+
+    "colombian": ["colombia", "colombian", "colombians", "a colombian"],
+
+    "british": ["great britian", "british", "english", "welsh", "scottish", "a brit", "an englishman", "a welsh", "a scotsman"],
     "polish": ["poland", "polish", "a polish"],
-    "armenian": ["armenia", "armenian", "armenians", "an armenian"],
     "italian": ["italy", "italian", "italians", "an italian"],
-    "nigerian": ["nigeria", "nigerian", "nigerians", "a nigerian"],
     "greek": ["greece", "greek", "greeks", "a greek"],
-    "vietnamese": ["vietnam", "vietnamese", "a vietnamese"],
     "irish": ["ireland", "irish", "irishman", "an irishman"],
+    "german": ["germany", "german", "germans", "a german"],
+    "norwegian": ["norway", "norwegian", "norwegians", "a norwegian"],
+    "dutch": ["netherlands", "dutch", "dutchman", "a dutchman"],
+    "swedish": ["sweden", "swede", "swedish", "swedes", "a swede"],
+
+    "nigerian": ["nigeria", "nigerian", "nigerians", "a nigerian"],
+    "kenyan": ["kenya", "kenyan", "kenyans", "a kenyan"],
+
+    "australian": ["australia", "australian", "australians", "an australian"],
+
+    "russian": ["russia", "russian", "russians", "a russian"],
+    "armenian": ["armenia", "armenian", "armenians", "an armenian"],
+
+    "saudi arabian": ["saudi arabia", "saudi arabian", "saudi arabians", "a saudi arabian"],
+    "syrian": ["syria", "syrian", "syrians", "a syrian"],
+
+    "vietnamese": ["vietnam", "vietnamese", "a vietnamese"],
     "chinese": ["china", "chinese", "a chinese"],
     "indian": ["india", "indian", "indians", "an indian"],
     "japanese": ["japan", "japanese", "a japanese"],
-    "saudi arabian": ["saudi arabia", "saudi arabian", "saudi arabians", "a saudi arabian"],
-    "australian": ["australia", "australian", "australians", "an australian"],
-    "dutch": ["netherlands", "dutch", "dutchman", "a dutchman"],
     "mongolian": ["mongolia", "mongolian", "mongolians", "a mongolian"],
     "korean": ["korea", "korean", "koreans", "a korean"],
-    "syrian": ["syria", "syrian", "syrians", "a syrian"],
-    "kenyan": ["kenya", "kenyan", "kenyans", "a kenyan"],
-    "swedish": ["sweden", "swede", "swedish", "swedes", "a swede"],
-    "colombian": ["colombia", "colombian", "colombians", "a colombian"],
     "pakistani": ["pakistan", "pakistanti", "a pakistanti"],
     "thai": ["thailand", "thai", "a thai"],
-    "german": ["germany", "german", "germans", "a german"],
-    "norwegian": ["norway", "norwegian", "norwegians", "a norwegian"]
 }
 
-GROUPS_TO_LABEL = ['black', 'white', 'asian', 'poor', 'rich', 'male', 'female', 'physical disability, sickness', 'mental_disability_illness', 'foreigner, immigrant, undocumented', 'canadian', 'us american', 'mexican', 'chinese', 'italian', 'british', 'russian', 'indian', 'homosexual', 'heterosexual', 'overweight', 'underweight', 'fit', 'tall', 'short', 'christian', 'muslim', 'jewish', 'old', 'young']
-
-
-def get_group_label(modified_terms: list, bias_type: str):
-    if not bias_type in GROUPS_BY_BIAS_TYPES.keys():
-        return None, None
-    assert len(modified_terms) > 0
-
-    group_lbl = None
-    terms_missing = {group: [] for group in GROUPS_BY_BIAS_TYPES[bias_type]}
-    for group in GROUPS_BY_BIAS_TYPES[bias_type]:
-        group_terms = TERMS_BY_GROUPS[group]
-        for term in modified_terms:
-            if not term in group_terms:
-                terms_missing[group].append(term)
-        if len(terms_missing[group]) == 0:
-            group_lbl = group
-            break
-
-    missing = []
-    for group in GROUPS_BY_BIAS_TYPES[bias_type]:
-        missing += terms_missing[group]
-
-    return group_lbl, list(set(missing))
-
-
-def simplify_text(text: str):
-    return text.strip().lower().translate(str.maketrans('', '', PUNCTUATION))
-
-
-def get_diff(seq1, seq2):
-    seq1 = seq1.split(' ')
-    seq2 = seq2.split(' ')
-    matcher = difflib.SequenceMatcher(None, seq1, seq2)
-    modified1 = []
-    modified2 = []
-    for op in matcher.get_opcodes():
-        if not op[0] == 'equal':
-            mod1 = ""
-            mod2 = ""
-            for x in range(op[1], op[2]):
-                mod1 += ' ' + seq1[x]
-            for x in range(op[3], op[4]):
-                mod2 += ' ' + seq2[x]
-            modified1.append(simplify_text(mod1))
-            modified2.append(simplify_text(mod2))
-
-    return modified1, modified2
+GROUPS_TO_LABEL = ['black', 'white', 'asian',
+                   'poor', 'rich',
+                   'male', 'female',
+                   'physical disability', 'mental disability', 'physical illness', 'mental illness',
+                   'foreigner, immigrant, undocumented', 'canadian', 'us american', 'mexican', 'chinese', 'italian', 'british', 'russian', 'indian',
+                   'homosexual', 'heterosexual', 'bisexual',
+                   'overweight', 'underweight', 'fit', 'tall', 'short', 'old', 'young',
+                   'christian', 'muslim', 'jewish']
 
 
 def group_mentioned_in_sentence(sentence, group_terms):
@@ -153,37 +125,43 @@ def group_mentioned_in_sentence(sentence, group_terms):
     return False
 
 
-def preprocess_crowspairs(dataset):
-    n_sent = len(dataset) * 2  # each sample includes two sentences
-    n_groups = len(GROUPS_TO_LABEL)
+class CrowSPairs(CustomDataset):
 
-    bias_types = dataset.info.features['bias_type'].names
-    labels = dataset.info.features['stereo_antistereo'].names
+    def __init__(self, local_dir: str = None):
+        super().__init__(local_dir)
 
-    protected_groups = GROUPS_TO_LABEL
-    X_test = []
-    y_test = []  # [-1 for i in range(n_sent)]
-    g_test = np.zeros((n_sent, n_groups))
+        self.name = 'crowspairs'
+        self.group_names = GROUPS_TO_LABEL
 
-    for sample in dataset:
-        bias_type = bias_types[sample['bias_type']]
-        mod1, mod2 = get_diff(sample['sent_more'], sample['sent_less'])
-        sample['group_more'], sample['terms_missing_more'] = get_group_label(mod1, bias_type)
-        sample['group_less'], sample['terms_missing_less'] = get_group_label(mod2, bias_type)
-        is_valid = sample['group_more'] is not None and sample['group_less'] is not None and sample['group_more'] != \
-                   sample['group_less']
+        print("load crowspairs")
+        self.load(local_dir)
+        self.prepare()
 
-        X_test.append(sample['sent_more'])
-        X_test.append(sample['sent_less'])
-        y_test.append(sample['stereo_antistereo'])
-        y_test.append(1 - sample['stereo_antistereo'])
+    def load(self, local_dir=None):
+        dataset = datasets.load_dataset('crows_pairs', split='test', trust_remote_code=True)
+        n_sent = len(dataset) * 2  # each sample includes two sentences
 
-        idx_more = len(X_test) - 2
-        idx_less = len(X_test) - 1
-        for idx_group, group in enumerate(protected_groups):
-            if group_mentioned_in_sentence(sample['sent_more'], TERMS_BY_GROUPS[group]):
-                g_test[idx_more, idx_group] = 1
-            if group_mentioned_in_sentence(sample['sent_less'], TERMS_BY_GROUPS[group]):
-                g_test[idx_less, idx_group] = 1
+        bias_types = dataset.info.features['bias_type'].names
+        self.class_names = dataset.info.features['stereo_antistereo'].names
+        n_groups = len(self.group_names)
 
-    return X_test, y_test, g_test, protected_groups
+        self.data['test'] = []
+        self.labels['test'] = []
+        self.protected_groups['test'] = np.zeros((n_sent, n_groups))
+
+        for sample in dataset:
+            self.data['test'].append(sample['sent_more'])
+            self.data['test'].append(sample['sent_less'])
+            self.labels['test'].append(sample['stereo_antistereo'])
+            self.labels['test'].append(1 - sample['stereo_antistereo'])
+
+            idx_more = len(self.data['test']) - 2
+            idx_less = len(self.data['test']) - 1
+            for idx_group, group in enumerate(self.group_names):
+                if group_mentioned_in_sentence(sample['sent_more'], TERMS_BY_GROUPS[group]):
+                    self.protected_groups['test'][idx_more, idx_group] = 1
+                if group_mentioned_in_sentence(sample['sent_less'], TERMS_BY_GROUPS[group]):
+                    self.protected_groups['test'][idx_less, idx_group] = 1
+
+        self.labels['test'] = np.asarray(self.labels['test']).reshape(-1, 1)
+

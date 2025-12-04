@@ -5,7 +5,7 @@ from sklearn.linear_model import LogisticRegression
 class CAV():
 
     def __init__(self):
-        self.clf = LogisticRegression(max_iter=100000, tol=1e-2) # default lbfgs solver (handles multi-class), l2 loss
+        self.clf = LogisticRegression(max_iter=100000, tol=1e-2)  # default lbfgs solver (handles multi-class), l2 loss
         self.multi_clfs = []
         self.multi_label = False
 

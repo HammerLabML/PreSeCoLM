@@ -1,0 +1,61 @@
+{
+  "huggingface_models": [
+    "bert-base-uncased",
+    "bert-large-uncased",
+    "distilbert-base-uncased",
+    "meta-llama/Llama-3.2-1B",
+    "meta-llama/Llama-3.2-3B",
+    "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+    "deepseek-ai/deepseek-llm-7b-base",
+    "EleutherAI/pythia-160m",
+    "EleutherAI/pythia-410m",
+    "EleutherAI/pythia-1b",
+    "EleutherAI/pythia-1.4b",
+    "facebook/opt-125m",
+    "facebook/opt-350m",
+    "facebook/opt-1.3b"
+  ],
+  "openai_models": [
+    "text-embedding-3-small",
+    "text-embedding-3-large"
+  ],
+  "pooling": [
+    "mean"
+  ],
+  "embedding_dir": "/vol/saschroeder_embeddings/",
+  "batch_size_lookup": "experiments/configs/batch_size_lookup_A40.json",
+  "results_path": "experiments/results/concept_eval/exp1_cv.csv",
+  "max_epochs": 50,
+  "datasets": [
+    {"name": "twitterAAE", "local_dir": null},
+    {"name": "implicit_hate", "local_dir": "../datasets/implicit-hate-corpus/"},
+    {"name": "winoqueer", "local_dir": "../datasets/winoqueer_final.csv"},
+    {"name": "sbic", "local_dir": "../datasets/filtered_sbic_minority_overview.csv"},
+    {"name": "bios-supervised", "local_dir": "../datasets/bios_huggingface_merge.pkl"},
+    {"name": "jigsaw", "local_dir": "../jigsaw_bias"},
+    {"name": "crows_pairs", "local_dir": null},
+    {"name": "stereoset", "local_dir": null}
+  ],
+  "classifier": {
+    "linear": {
+    },
+    "MLP2": {
+      "hidden_size_factor": [
+        1.0
+      ]
+    },
+    "wrapper": {
+      "optimizer": [
+        "Salsa"
+      ],
+      "criterion": {
+        "multi-label": ["BCEWithLogitsLoss"],
+        "single-label": ["CrossEntropyLoss"]
+      },
+      "lr": [
+        null
+      ],
+      "batch_size": 64
+    }
+  }
+}
