@@ -4,6 +4,7 @@ This repository includes the implementation of some experiments in the scope of 
 It includes the code to reproduce the papers:
 
 - Sarah Schröder, Alexander Schulz and Barbara Hammer. "Evaluating Concept Discovery Methods for Sensitive Attributes in Language Models". Accepted at ESANN 2025.
+- Sarah Schröder, Valerie Vaquet and Barbara Hammer. "Linearity of Sensitive Concepts in Language Models". Submitted to ESANN 2026.
 
 
 ## Installation
@@ -35,14 +36,6 @@ The setup (i.e. which datasets, protected groups and defining terms are used) is
 ### ESANN 2025 Experiments
 See the [esann25 branch](https://github.com/HammerLabML/PreSeCoLM/tree/esann25).
 
+### ESANN 2026 Experiments
+See the [esann26 branch](https://github.com/HammerLabML/PreSeCoLM/blob/esann26)
 
-## Cite this
-TODO
-
-
-
-## References
-
-[1] "The SAME score: Improved cosine based bias score for word embeddings", [Arxiv Paper](https://arxiv.org/abs/2203.14603), [Conference Paper](https://ieeexplore.ieee.org/abstract/document/10651275/)    
-[2] "Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings", [Arxiv Paper](https://arxiv.org/abs/1607.06520), [Conference Paper](https://proceedings.neurips.cc/paper_files/paper/2016/file/a486cd07e4ac3d270571622f4f316ec5-Paper.pdf)    
-[3] "Measuring fairness with biased data: A case study on the effects of unsupervised data in fairness evaluation.", [Conference Paper](https://link.springer.com/chapter/10.1007/978-3-031-43085-5_11)  
