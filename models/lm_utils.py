@@ -9,9 +9,16 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 
 # for huggingface models 
 
-def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir):
-    model_name = lm.model.config._name_or_path
-    pooling = lm.pooling
+def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir, is_sentence_transformer=False, batch_size=None, model_name=None):
+    if is_sentence_transformer and batch_size is None:
+        print("sentence transformer requires batch size to be specified! choose batch_size=1")
+        batch_size = 1
+    if is_sentence_transformer:
+        assert model_name is not None, "need to pas the model name for sentence transformers (required to load/ save embeddings)"
+        pooling = "st"
+    else:
+        model_name = lm.model.config._name_or_path
+        pooling = lm.pooling
 
     if '/' in model_name:
         model_name = model_name.replace('/', '_')
@@ -25,7 +32,10 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir):
     else:
         print("could not find %s" % save_file)
         print("embed %s set..." % split)
-        embeddings = lm.embed(texts)
+        if is_sentence_transformer:
+            embeddings = lm.encode(texts, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True)
+        else:
+            embeddings = lm.embed(texts)
         with open(save_file, 'wb') as handle:
             pickle.dump(embeddings, handle)
     return embeddings.astype(np.float32)

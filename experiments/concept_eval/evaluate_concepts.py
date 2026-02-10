@@ -14,6 +14,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, precision_r
 from sklearn.model_selection import train_test_split
 from datetime import datetime
 from embedding import BertHuggingface
+from sentence_transformers import SentenceTransformer
 
 import copy
 from salsa.SaLSA import SaLSA
@@ -222,7 +223,8 @@ def run(config):
     # language models
     openai_models = config["openai_models"]
     huggingface_models = config["huggingface_models"]
-    model_names = huggingface_models + openai_models
+    sentence_transformer_models = config["sentence_transformer_models"]
+    model_names = huggingface_models + openai_models + sentence_transformer_models
 
     # dictionary with batch sizes for huggingface models
     with open(config["batch_size_lookup"], 'r') as f:
@@ -251,6 +253,11 @@ def run(config):
             lm = BertHuggingface(2, model_name=model, batch_size=1)
             lm_emb_size = lm.model.config.hidden_size
             lm.model = lm.model.to('cpu')
+            del lm
+        elif model in sentence_transformer_models:
+            lm = SentenceTransformer(model)
+            lm_emb_size = lm[1].word_embedding_dimension
+            lm = lm.to('cpu')
             del lm
         else:  # openai model
             if model == 'text-embedding-3-small':

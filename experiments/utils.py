@@ -4,6 +4,9 @@ import scipy
 import math
 from sklearn.metrics import f1_score, precision_score, recall_score
 import sys
+from sentence_transformers import SentenceTransformer
+import torch
+
 
 # local import for data loader
 from pathlib import Path
@@ -12,6 +15,7 @@ import data_loader
 import models
 
 SUPPORTED_OPENAI_MODELS = ["text-embedding-3-small", "text-embedding-3-large"]
+SUPPORTED_SENTENCE_TRANSFORMER = ["Qwen/Qwen3-Embedding-0.6B"]
 SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "distilbert-base-uncased",
                                 "google/electra-small-generator", "google/electra-base-generator", "google/electra-large-generator",
                                 "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2",
@@ -198,6 +202,8 @@ def align_labels(y_test, y_pred, pred, label_test, label_pred):
 def get_model_type_architecture(model_name):
     if model_name in SUPPORTED_OPENAI_MODELS:
         return 'text-embedding-3', 'embedder'
+    elif model_name in SUPPORTED_SENTENCE_TRANSFORMER:
+        return 'sentence_transformer', 'sentence_transformer' # TODO
     else:
         assert model_name in SUPPORTED_HUGGINGFACE_MODELS, "model '%s' is not among the supported openai or huggingface models!" % model_name
         lm = models.get_pretrained_model(model_name, 2, batch_size=1)
@@ -220,7 +226,8 @@ def get_model_type_architecture(model_name):
 
 def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str, pooling: str, batch_size: int,
                                 local_dir=None, defining_term_dict=None):
-    assert (model_name in SUPPORTED_OPENAI_MODELS or model_name in SUPPORTED_HUGGINGFACE_MODELS), "model '%s' is not among the supported openai or huggingface models!" % model_name
+    assert (model_name in SUPPORTED_OPENAI_MODELS or model_name in SUPPORTED_HUGGINGFACE_MODELS 
+            or model_name in SUPPORTED_SENTENCE_TRANSFORMER), "model '%s' is not among the supported openai or huggingface models!" % model_name
 
     # load dataset
     dataset = data_loader.get_dataset(dataset_name, local_dir)
@@ -238,8 +245,39 @@ def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str
 
         if defining_term_dict is not None:
             emb_defining_attr_dict = models.get_defining_term_embeddings(defining_term_dict, model_name, emb_dir)
+    elif model_name in SUPPORTED_SENTENCE_TRANSFORMER:
+        print("sentence transformer...")
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+        lm = SentenceTransformer(model_name, device=device)
 
+        split_emb = {}
+        for split in dataset.splits:
+            print("embed %s split..." % split)
+            data, _, _, _, _, _ = dataset.get_split(split)
+            split_emb[split] = models.load_or_compute_embeddings(data, lm, dataset_name, split, emb_dir, is_sentence_transformer=True, 
+                                                                 batch_size=batch_size, model_name=model_name)
+        dataset.set_preprocessed_data(split_emb)
+
+        if defining_term_dict is not None:
+            if isinstance(defining_term_dict, dict):
+                # defining terms might be passed as dictionary (sorted by protected groups)
+                if defining_term_dict is not None:
+                    emb_defining_attr_dict = {attr: {} for attr in defining_term_dict.keys()}
+                    # defining terms is a list of defining attr for different attributes (list[list[list]])
+                    print("embed defining terms...")
+                    for attr, dterm_dict in defining_term_dict.items():
+                        for group, dterms in dterm_dict.items():
+                            emb_defining_attr_dict[attr][group] = lm.encode(dterms, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True)
+            else:
+                # might also be a list, simply embed then
+                assert isinstance(defining_term_dict, list), "expected list or dictionary with defining terms"
+                emb_defining_attr_dict = lm.encode(defining_term_dict, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True)
+                
     else:  # model_name in SUPPORTED_HUGGINGFACE_MODELS (already checked by assert)
+        print("huggingface model...")
         # load huggingface model and get embeddings (either loaded or computed)
         if dataset.n_classes == 0:  # twitterAAE does not have labels
             n_classes = 2
