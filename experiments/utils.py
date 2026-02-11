@@ -270,11 +270,11 @@ def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str
                     print("embed defining terms...")
                     for attr, dterm_dict in defining_term_dict.items():
                         for group, dterms in dterm_dict.items():
-                            emb_defining_attr_dict[attr][group] = lm.encode(dterms, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True)
+                            emb_defining_attr_dict[attr][group] = lm.encode(dterms, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True).to('cpu').detach().numpy()
             else:
                 # might also be a list, simply embed then
                 assert isinstance(defining_term_dict, list), "expected list or dictionary with defining terms"
-                emb_defining_attr_dict = lm.encode(defining_term_dict, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True)
+                emb_defining_attr_dict = lm.encode(defining_term_dict, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True).to('cpu').detach().numpy()
                 
     else:  # model_name in SUPPORTED_HUGGINGFACE_MODELS (already checked by assert)
         print("huggingface model...")

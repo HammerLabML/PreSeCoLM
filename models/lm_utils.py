@@ -33,7 +33,7 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir, is_sentence_t
         print("could not find %s" % save_file)
         print("embed %s set..." % split)
         if is_sentence_transformer:
-            embeddings = lm.encode(texts, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True)
+            embeddings = lm.encode(texts, batch_size=batch_size, show_progress_bar=True, convert_to_tensor=True).to('cpu').detach().numpy()
         else:
             embeddings = lm.embed(texts)
         with open(save_file, 'wb') as handle:
