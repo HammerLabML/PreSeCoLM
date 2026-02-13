@@ -15,7 +15,8 @@ import data_loader
 import models
 
 SUPPORTED_OPENAI_MODELS = ["text-embedding-3-small", "text-embedding-3-large"]
-SUPPORTED_SENTENCE_TRANSFORMER = ["Qwen/Qwen3-Embedding-0.6B"]
+SUPPORTED_SENTENCE_TRANSFORMER = ["Qwen/Qwen3-Embedding-0.6B", "multi-qa-mpnet-base-dot-v1", "multi-qa-distilbert-v1", "multi-qa-MiniLM-L6-dot-v1", 
+                                  "Qwen/Qwen3-VL-Embedding-2B", "Qwen/Qwen3-VL-Embedding-6B"]
 SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "distilbert-base-uncased",
                                 "google/electra-small-generator", "google/electra-base-generator", "google/electra-large-generator",
                                 "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2",
@@ -203,7 +204,11 @@ def get_model_type_architecture(model_name):
     if model_name in SUPPORTED_OPENAI_MODELS:
         return 'text-embedding-3', 'embedder'
     elif model_name in SUPPORTED_SENTENCE_TRANSFORMER:
-        return 'sentence_transformer', 'sentence_transformer' # TODO
+        if 'Qwen' in model_name:
+            return 'gwen-embedder', 'embedder'
+        elif 'multi-qa' in model_name:
+            return 'multi-qa', 'embedder'
+        return 'sentence-transformer', 'embedder'
     else:
         assert model_name in SUPPORTED_HUGGINGFACE_MODELS, "model '%s' is not among the supported openai or huggingface models!" % model_name
         lm = models.get_pretrained_model(model_name, 2, batch_size=1)
