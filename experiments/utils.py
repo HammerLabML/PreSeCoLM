@@ -15,8 +15,10 @@ import data_loader
 import models
 
 SUPPORTED_OPENAI_MODELS = ["text-embedding-3-small", "text-embedding-3-large"]
-SUPPORTED_SENTENCE_TRANSFORMER = ["Qwen/Qwen3-Embedding-0.6B", "multi-qa-mpnet-base-dot-v1", "multi-qa-distilbert-v1", "multi-qa-MiniLM-L6-dot-v1", 
-                                  "Qwen/Qwen3-VL-Embedding-2B", "Qwen/Qwen3-VL-Embedding-6B"]
+SUPPORTED_SENTENCE_TRANSFORMER = ["Qwen/Qwen3-Embedding-0.6B", "Qwen/Qwen3-VL-Embedding-2B", "Qwen/Qwen3-VL-Embedding-6B", "Qwen/Qwen3-Embedding-4B", "Qwen/Qwen3-Embedding-8B",
+                                  "multi-qa-mpnet-base-dot-v1", "multi-qa-distilbert-v1", "multi-qa-MiniLM-L6-dot-v1", 
+                                  "all-distilroberta-v1", "all-mpnet-base-v2", "all-MiniLM-L12-v2",
+                                  "distiluse-base-multilingual-cased-v1"]
 SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "distilbert-base-uncased",
                                 "google/electra-small-generator", "google/electra-base-generator", "google/electra-large-generator",
                                 "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2",
@@ -29,7 +31,8 @@ SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "dist
                                 "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", "deepseek-ai/deepseek-llm-7b-base", "deepseek-ai/deepseek-llm-7b-chat",
                                 "facebook/bart-base", "facebook/bart-large", "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b",
                                 "google-t5/t5-small", "google-t5/t5-base",
-                                "xlnet/xlnet-base-cased", "xlnet/xlnet-large-cased"]
+                                "xlnet/xlnet-base-cased", "xlnet/xlnet-large-cased",
+                                "all-distilroberta-v1", "distiluse-base-multilingual-cased-v1"]
 # possible other models (test):
 # "openai-gpt"
 # "xlm-roberta-base", "xlm-roberta-large",
@@ -205,10 +208,10 @@ def get_model_type_architecture(model_name):
         return 'text-embedding-3', 'embedder'
     elif model_name in SUPPORTED_SENTENCE_TRANSFORMER:
         if 'Qwen' in model_name:
-            return 'gwen-embedder', 'embedder'
-        elif 'multi-qa' in model_name:
-            return 'multi-qa', 'embedder'
-        return 'sentence-transformer', 'embedder'
+            return 'qwen-embedder', 'embedder'
+        else:
+            return 'SBERT', 'embedder'
+        return 'SBERT', 'embedder'
     else:
         assert model_name in SUPPORTED_HUGGINGFACE_MODELS, "model '%s' is not among the supported openai or huggingface models!" % model_name
         lm = models.get_pretrained_model(model_name, 2, batch_size=1)
@@ -256,7 +259,7 @@ def get_dataset_with_embeddings(emb_dir: str, dataset_name: str, model_name: str
             device = torch.device("cuda")
         else:
             device = torch.device("cpu")
-        lm = SentenceTransformer(model_name, device=device)
+        lm = SentenceTransformer(model_name, device=device, model_kwargs={"torch_dtype": torch.float32})
 
         split_emb = {}
         for split in dataset.splits:
