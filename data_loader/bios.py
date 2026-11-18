@@ -3,8 +3,6 @@ from datasets import Dataset, DatasetDict, load_dataset
 from .dataset import CustomDataset, label2onehot
 import pickle
 
-
-# filter the dataset: from MeasuringFairnessWithBiasedData (TODO: github link)
 def filter_bios_dataset(dataset: dict, classes: list, keys_to_copy: list, single_label=True, review_only=True,
                         valid_only=True):
     splits = dataset.keys()
@@ -42,7 +40,7 @@ class BiosDataset(CustomDataset):
     def __init__(self, local_dir: str = None, option: str = 'supervised'):
         super().__init__(local_dir)
 
-        valid_options = ['supervised', 'unsupervised']
+        valid_options = ['supervised', 'supervised-v2', 'unsupervised']
         err_str = (("There are two options for the BIOS dataset: 1) for 'unsupervised' the dataset will be loaded from "
                     "huggingface and used as it is, 2) for 'supervised' the dataset will be filtered for valid samples "
                     "and a subset of 10 occupations. Please select one of these options: ")
@@ -52,6 +50,8 @@ class BiosDataset(CustomDataset):
 
         if option == 'supervised':
             self.name = 'bios_sup'
+        elif option == 'supervised':
+            self.name = 'bios_sup2'
         else:
             self.name = 'bios'
         self.group_names = ['male', 'female']
@@ -62,13 +62,15 @@ class BiosDataset(CustomDataset):
 
     def load(self, local_dir=None):
 
-        if self.option == 'supervised':
+        if self.option in ['supervised', 'supervised-v2']:
             with open(local_dir, 'rb') as handle:
                 merged_dataset = pickle.load(handle)
 
             keys_to_copy = ['hard_text', 'profession', 'gender', 'raw', 'titles_supervised', 'review', 'valid', 'name']
             self.class_names = ['architect', 'surgeon', 'dentist', 'teacher', 'psychologist', 'nurse', 'photographer',
                                 'physician', 'attorney', 'journalist']
+            if self.option == 'supervised-v2':
+                self.class_names += ['software_engineer', 'model']
 
             # multi-label only reviewed+valid
             ds = filter_bios_dataset(merged_dataset, self.class_names, keys_to_copy, False, True,

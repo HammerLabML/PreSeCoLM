@@ -17,6 +17,8 @@ def get_dataset(dataset_name, local_dir=None):
             dataset = JigsawBias(local_dir=local_dir, option='single-class')
     elif dataset_name == "bios-supervised":
         dataset = BiosDataset(local_dir=local_dir, option='supervised')
+    elif dataset_name == "bios-supervised-v2":
+        dataset = BiosDataset(local_dir=local_dir, option='supervised-v2')
     elif dataset_name == "bios-unsupervised":
         dataset = BiosDataset(local_dir=local_dir, option='unsupervised')
     elif dataset_name == "twitterAAE":
