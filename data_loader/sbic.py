@@ -4,126 +4,130 @@ import datasets
 import numpy as np
 import itertools
 
+import pandas as pd
+import numpy as np
 
-def merge_minority_lists(series):
-    all_items = set()
-    for sublist in series.dropna():
-        items = str(sublist).split(',')
-        all_items.update([item.strip() for item in items])
-    return ', '.join(sorted(all_items))
+import datasets
+import re
 
-
-def merge_split(ds, local_dir):
-    df = pd.DataFrame(ds)
-
-    # Convert the annotation columns to numeric
-    for col in ['offensiveYN', 'intentYN', 'sexYN']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')  # Convert to float, NaNs if conversion fails
-
-    # Compute mean values per HITId
-    mean_df = df.groupby('HITId')[['offensiveYN', 'intentYN', 'sexYN']].transform('mean')
-
-    # Compute merged targetMinority per HITId
-    df['merged_targetMinority'] = df.groupby('HITId')['targetMinority'].transform(merge_minority_lists)
-
-    # Add the mean columns back to the original DataFrame
-    df['mean_offensiveYN'] = mean_df['offensiveYN']
-    df['mean_intentYN'] = mean_df['intentYN']
-    df['mean_sexYN'] = mean_df['sexYN']
-
-    # Load overview data
-    overview_df = pd.read_csv(local_dir)
-
-    # Make sure both columns are strings
-    overview_df['targetMinority'] = overview_df['targetMinority'].astype(str)
-    overview_df['mergedMinority'] = overview_df['mergedMinority'].astype(str)
-
-    # Mapping dictionary: targetMinority -> mergedMinority
-    minority_map = dict(zip(overview_df['targetMinority'], overview_df['mergedMinority']))
-
-    # Function to map multiple targetMinorities to mergedMinority values
-    def map_merged_minorities(targets):
-        if pd.isna(targets):
-            return ''
-        groups = [grp.strip() for grp in str(targets).split(', ')]
-        merged = [minority_map.get(g, '').split(', ') for g in groups]
-        merged = list(itertools.chain.from_iterable(merged))
-        if 'nan' in merged:
-            merged.remove('nan')
-        return list(set(merged))
-
-    # Apply mapping function
-    df['mergedMinority'] = df['merged_targetMinority'].apply(map_merged_minorities)
-
-    merged = df.groupby('HITId', as_index=False)[
-        ['post', 'mean_offensiveYN', 'mean_intentYN', 'mean_sexYN', 'mergedMinority']].first()
-
-    return merged
+from .sbic_helper import load_data_original, load_data_aae_annotation_study, load_data_annotation_study, merge_minority_lists, merge_split
 
 
 class SBICDataset(CustomDataset):
 
-    def __init__(self, local_dir: str = None, option: str = 'all'):
+    # TODO add options:
+    # all               - load full dataset
+    # subset-orig       - load subset with original labels
+    # subset-balanced   - load subset with labels from study1 (balanced annotator pool)
+    # subset-black      - load subset with labels from study2 (black annotators)
+    # use/ copy the dataloader from SBICLabelQuality repo?
+
+    # TODO outside this script
+    # add options to dataloader
+    # make sure that all subsets use the same embedding files, identified by sbic-subset
+    # copy subset embeddings from full dataset (at least for openai)
+    def __init__(self, local_dir = None, option: str = 'all'):
         super().__init__(local_dir)
 
         self.name = 'sbic'
-        # these groups do not appear in all splits:
-        # hetero, mormon, cis, hindu, asexual, feminists, pagan/atheist, blind, ...
 
-        # very rare (<0.1% in test data):
-        # mixed race, non-binary, autism, activists, police, accident/ natural disaster, german, japanese, pakistani,
-        # russian, saudis, southern, syrian, blondes, catholic, incest victims, kidnapping victims, murder victims,
-        # pregnant, priest, red hair, short people, slavery victims, war/combat victims
-        self.group_names = ['white', 'black', 'asian', 'non-white', 'latin-american', 'hispanic', 'mixed race', 'middle eastern', 'indigenous', 'race',
-                            'male', 'female', 'non-binary', 'trans', 'lgbtq+',
-                            'bisexual', 'homosexual',
-                            'christian', 'jewish', 'muslim/islam', 'religion',
-                            'physical illness/ disorder', 'mental illness/ disorder', 'physical disability', 'mental disability', 'autism', 'disability',
-                            'overweight', 'children', 'minors', 'old people', 'bad looking', 'young',
-                            'poor', 'political group', 'feminist', 'liberal', 'conservatives', 'activists', 'police',
-                            'violence victims', 'sexual assault/harassment victims', 'holocaust victims', 'genocide victims', 'terrorism victims', 'shooting victims', 'accident/ natural disaster victims',
-                            'african', 'european', 'american', 'arab', 'mexican', 'chinese', 'ethiopian', 'german', 'indian', 'japanese', 'pakistani', 'russian', 'saudis', 'southern', 'syrian',
-                            'blondes', 'catholic', 'immigrant', 'incest victims', 'kidnapping victims', 'minorities', 'murder victims', 'pregnant', 'priest', 'red hair', 'short people', 'slavery victims', 'war/ combat victims'
-                            ]
+        alid_options = ['full', 'subset-orig', 'subset-balanced', 'subset-black']
+        err_str = (("There are four options for the SBIC dataset: 1) 'full' the full dataset will be loaded from "
+                    "huggingface, alternatively a re-annotated subset can be loaded with different annotation sets:"
+                    "2) subset-orig uses original labels (predominantly white annotators, many groups labeled), 3) subset-balanced new labels from an ethnicity-balanced"
+                    "annotator pool (again many groups labeled), and 4) subset-black new labels exclusively from black annotaotrs (only covering black and 'other groups'). "
+                    "Please select one of these options: ")
+                   + str(valid_options))
+        assert option in valid_options, err_str
 
-        self.class_names = ['offensiveYN', 'intentYN', 'sexYN']
+        # these are the merged groups and categories with sufficient support in the subset
+        # i.e. more than 10 samples (labeled by at least 1 annotator) in the subset with original labels
+        self.group_names = ['white', 'black', 'asian', 'people of color', 'hispanic/ latin-american', 'middle eastern', 'indigenous',
+                    'male', 'female', 'TIN', 'lgbtq', 'homosexual',
+                    'christian', 'jewish', 'muslim',
+                    'mexican', 'american', 'nationality',
+                    'physical disability', 'mental health conditions'
+                    ]
+        self.category_names = ['race/ethnicity', 'religion', 'nationality', 'gender/ sexual orientation', 'victims', 'disability', 'health']
 
-        # all: keep all samples
-        # offensive: test set only contains offensive samples (where targets have been labeled)
+        # full: keep all samples
+        # subset-*: subset from annotation study (TODO link)
+        # subset-orig: original labels
+        # subset-balanced: study 1 labels
+        # subset-black: study 2 labels
         self.option = option 
+
+        if self.option == 'full' or self.option == 'subset-orig':
+            self.class_names = ['offensiveYN', 'intentYN', 'whoTarget'] # 3rd means if a group is targeted
+        else:
+            self.class_names = ['offense', 'intent', 'group_off'] # 3rd means if a group is targeted
 
         print("load SBIC with local file: %s" % local_dir)
         self.load(local_dir)
         self.prepare()
 
-    def _set_split(self, df, split):
-        self.data[split] = df.loc[:, 'post'].to_list()
+    def _set_split(self, df: pd.DataFrame, split: str, text_col: str):
+        self.data[split] = df.loc[:, text_col].to_list()
+        
+        mean_lbl = df.loc[:, self.class_names].to_numpy()
+        self.labels[split] = (mean_lbl > 0.5).astype('float64') # could do other label processing / handle as regression
 
-        mean_lbl = df.loc[:, ['mean_offensiveYN', 'mean_intentYN', 'mean_sexYN']].to_numpy()
-        # TODO: intentionally labeled as 0.5 = uncertain! -> just keep mean label and treat as regression?
-        self.labels[split] = (mean_lbl > 0.5).astype('float64')
-        # TODO: filter uncertain labels? around ~15% of samples are between 0.4 and 0.6
+        group_mean_lbl = df.loc[:, self.group_names].to_numpy()
+        self.protected_groups[split] = (group_mean_lbl > 0.5).astype('float64') # could use other threshold
 
-        self.protected_groups[split] = np.zeros((len(df), len(self.group_names)))
-        for i, label in enumerate(self.group_names):
-            self.protected_groups[split][:, i] = df['mergedMinority'].apply(lambda x: 1 if label in x else 0).astype('float64')
 
     def load(self, local_dir=None):
-        for split in ['train', 'test', 'validation']:
-            ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
-            df = merge_split(ds, local_dir)
+        assert isinstance(local_dir, dict), "SBIC requires a dictionary of local paths"
 
-            if self.option == 'offensive' and split == 'test':
-                df = df[df['mean_offensiveYN'] > 0]
+        if 'subset' in self.option:
+            key = 'data'
+            assert key in local_dir.keys(), "for subset option require at least the path to the data using key: "+key
+            data_path = local_dir[key]
+        if self.option == 'subset-orig' or self.option == 'full':
+            key = 'label_map_orig'
+            assert key in local_dir.keys(), "if loading original labels, path to label mapping for original labels is required using key: "+key
+            label_lookup_orig_path = local_dir[key]   
 
-            all_groups = []
-            for sample in df.loc[:, 'mergedMinority']:
-                for group in sample:
-                    if not group in all_groups:
-                        all_groups.append(group)
-            #print(all_groups)
-            if split == 'validation':
-                split = 'dev'
-            self._set_split(df, split)
+        if 'subset' in self.option:
+            # start: subset loading
+
+            if self.option == 'subset-orig':
+                # get ids from annotation study data
+                df = load_data_annotation_study(data_path=data_path, label_hierarchy_path=label_hierarchy_path, label_category_path=label_category_path, 
+                                                sel_labels=self.group_names, sel_level='merged', do_aggregate=True, exclude_flagged_samples=True)
+                post_ids = list(set(df['HITId']))
+
+                # load original labels for these samples
+                df = load_data_original(split='test', label_lookup_path=label_lookup_orig_path, label_hierarchy_path=label_hierarchy_path, 
+                                        label_category_path=label_category_path, sel_labels=self.group_names, sel_level='merged', do_aggregate=True,
+                                        sel_post_ids=post_ids)
+                
+            elif self.option == 'subset-balanced':
+                assert 'label_hierarchy' in local_dir.keys() and 'label_category' in local_dir.keys()
+                label_hierarchy_path = local_dir['label_hierarchy']
+                label_category_path = local_dir['label_category']
+
+                df = load_data_annotation_study(data_path=data_path, label_hierarchy_path=label_hierarchy_path, label_category_path=label_category_path, 
+                                    sel_labels=self.group_names, sel_level='merged', do_aggregate=True, exclude_flagged_samples=True)
+                post_ids = list(set(df['HITId']))
+
+                # TODO convert group_ref -> group
+
+            else: # subset-black
+                df = load_data_aae_annotation_study(data_path=data_path, do_aggregate=True, exclude_flagged_samples=True)
+                self.group_names = ['black', 'aae'] 
+                # TODO check actual column names -> map to those above
+
+            text_col = 'post' if self.option == 'subset-orig' else 'post_prep'
+            self._set_split(df=df, split='test', text_col=text_col)
+
+            
+            # end: subset loading
+        else:
+            for split in ['train', 'test', 'validation']:
+                df = load_data_original(split=split, label_lookup_path=label_lookup_orig_path, label_hierarchy_path=label_hierarchy_path,
+                                   label_category_path=label_category_path, sel_labels=self.group_names, sel_level='merged', do_aggregate=True)
+                
+                self._set_split(df=df, split='test', text_col=text_col)
 
 
