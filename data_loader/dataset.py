@@ -44,7 +44,7 @@ def compute_class_weights(y_train: np.ndarray, classes: list, min_samples=5, ver
 
 class CustomDataset:
 
-    def __init__(self, local_dir: str = None, n_folds: int = 4, random_state: int = 42):
+    def __init__(self, local_dir: None, n_folds: int = 4, random_state: int = 42):
         self.name = None
         self.local_dir = local_dir
         self.is_shuffled = False

@@ -41,9 +41,9 @@ class BiosDataset(CustomDataset):
         super().__init__(local_dir)
 
         valid_options = ['supervised', 'supervised-v2', 'unsupervised']
-        err_str = (("There are two options for the BIOS dataset: 1) for 'unsupervised' the dataset will be loaded from "
-                    "huggingface and used as it is, 2) for 'supervised' the dataset will be filtered for valid samples "
-                    "and a subset of 10 occupations. Please select one of these options: ")
+        err_str = (("There are three options for the BIOS dataset: 1) for 'unsupervised' the dataset will be loaded from "
+                    "huggingface and used as it is, 2) for 'supervised' (or 'supervised-v2') the dataset will be filtered for valid samples "
+                    "and a subset of 10 (or 12) occupations. Please select one of these options: ")
                    + str(valid_options))
         assert option in valid_options, err_str
         self.option = option
