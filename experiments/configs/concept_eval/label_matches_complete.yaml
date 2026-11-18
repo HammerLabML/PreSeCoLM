@@ -12,13 +12,12 @@ gender_sexual_orientation:
   cis: [Cisgender, Cis]
   non_binary: [non-binary, NB]
 ethnicity:
-  black: [black, aa]
+  aae: [aa]
+  black: [black]
   white: [white]
   asian: [asian, south east asian]
   middle_eastern: [middle eastern, middle east]
   hispanic/latino: [latino, latin-american, hispanic/latino, latino/latina, hispanic, mexican]
-  latino: [latino, latin-american, hispanic/latino, latino/latina, mexican]
-  hispanic: [hispanic, hispanic/latino, mexican]
   african: [african]
   european: [european]
   indigenous: [indigenous]
@@ -43,7 +42,7 @@ victims:
   genocide victims: ['genocide victims', 'holocaust victims']
   slavery victims: ['slavery victims']
 nationality:
-  american: ['american']
+  american: ['american', 'us american', 'southern']
   arab: ['arab', 'saudis']
   british: ['british']
   canadian: ['canadian']
@@ -58,7 +57,6 @@ nationality:
   pakistani: ['pakistani']
   russian: ['russian']
   syrian: ['syrian']
-  us american: ['us american', 'southern']
 body:
   illness: [physical illness]
   not_attractive: [bad looking]
