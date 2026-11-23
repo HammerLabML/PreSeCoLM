@@ -14,9 +14,7 @@ from .sbic_helper import load_data_original, load_data_aae_annotation_study, loa
 
 
 class SBICDataset(CustomDataset):
-
-    # TODO outside this script
-    # copy subset embeddings from full dataset (at least for openai; might need to keep HITIds to make the match or use posts from subset-orig version)
+    
     def __init__(self, local_dir = None, option: str = 'full'):
         super().__init__(local_dir)
 
