@@ -4,6 +4,9 @@ import numpy as np
 import datasets
 import re
 
+import itertools
+
+
 
 def map_labels(df, lookup_df, label_col='label', new_label_col='standardized_label', 
                lookup_col_raw='raw', lookup_col_target='target', 
@@ -93,7 +96,7 @@ def binarize_identity_labels(df: pd.DataFrame, label_column: str, sel_labels: li
         Copy of df with additional column including the binarized labels.
     """
     df = df.copy()
-
+    
     if sel_labels is None:
         # use all labels appearing in that column
         sel_labels = (
@@ -578,3 +581,58 @@ def load_both_datasets(new_data_path: str, label_lookup_orig_path: str, label_hi
     return df_new, df_orig
 
 
+# legacy code for full dataset
+def merge_minority_lists(series):
+    all_items = set()
+    for sublist in series.dropna():
+        items = str(sublist).split(',')
+        all_items.update([item.strip() for item in items])
+    return ', '.join(sorted(all_items))
+
+
+def merge_split(ds, local_dir):
+    df = pd.DataFrame(ds)
+
+    # Convert the annotation columns to numeric
+    for col in ['offensiveYN', 'intentYN', 'whoTarget']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')  # Convert to float, NaNs if conversion fails
+
+    # Compute mean values per HITId
+    mean_df = df.groupby('HITId')[['offensiveYN', 'intentYN', 'whoTarget']].transform('mean')
+
+    # Compute merged targetMinority per HITId
+    df['merged_targetMinority'] = df.groupby('HITId')['targetMinority'].transform(merge_minority_lists)
+
+    # Add the mean columns back to the original DataFrame
+    df['mean_offensiveYN'] = mean_df['offensiveYN']
+    df['mean_intentYN'] = mean_df['intentYN']
+    df['mean_whoTarget'] = mean_df['whoTarget']
+
+    # Load overview data
+    overview_df = pd.read_csv(local_dir, sep=';')
+
+    # Make sure both columns are strings
+    overview_df['raw'] = overview_df['raw'].astype(str)
+    overview_df['standardized_lbl'] = overview_df['standardized_lbl'].astype(str)
+
+    # Mapping dictionary: raw targetMinority lbl -> standardized_lbl
+    minority_map = dict(zip(overview_df['raw'], overview_df['standardized_lbl']))
+
+    # Function to map multiple targetMinorities to standardized_lbl values
+    def map_merged_minorities(targets):
+        if pd.isna(targets):
+            return ''
+        groups = [grp.strip() for grp in str(targets).split(', ')]
+        merged = [minority_map.get(g, '').split(', ') for g in groups]
+        merged = list(itertools.chain.from_iterable(merged))
+        if 'nan' in merged:
+            merged.remove('nan')
+        return list(set(merged))
+
+    # Apply mapping function
+    df['standardized_lbl'] = df['targetMinority'].apply(map_merged_minorities)
+
+    merged = df.groupby('HITId', as_index=False)[
+        ['post', 'mean_offensiveYN', 'mean_intentYN', 'mean_whoTarget', 'standardized_lbl']].first()
+
+    return merged

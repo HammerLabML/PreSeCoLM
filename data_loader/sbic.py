@@ -10,13 +10,12 @@ import numpy as np
 import datasets
 import re
 
-from .sbic_helper import load_data_original, load_data_aae_annotation_study, load_data_annotation_study
+from .sbic_helper import load_data_original, load_data_aae_annotation_study, load_data_annotation_study, merge_split, binarize_identity_labels
 
 
 class SBICDataset(CustomDataset):
 
     # TODO outside this script
-    # make sure that all subsets use the same embedding files, identified by sbic-subset (all subsets have the same order now)
     # copy subset embeddings from full dataset (at least for openai; might need to keep HITIds to make the match or use posts from subset-orig version)
     def __init__(self, local_dir = None, option: str = 'full'):
         super().__init__(local_dir)
@@ -50,6 +49,8 @@ class SBICDataset(CustomDataset):
         # subset-black: study 2 labels
         self.option = option 
 
+        self.ids = {} # remember ids for cross-references between subset and full dataset
+
         if self.option == 'full' or self.option == 'subset-orig':
             self.class_names = ['offensiveYN', 'intentYN', 'whoTarget'] # 3rd means if a group is targeted
         else:
@@ -67,6 +68,8 @@ class SBICDataset(CustomDataset):
 
         group_mean_lbl = df.loc[:, self.group_names].to_numpy()
         self.protected_groups[split] = (group_mean_lbl > 0.5).astype('float64') # could use other threshold
+
+        self.ids[split] = list(df.loc[:, 'HITId'])
 
 
     def load(self, local_dir=None):
@@ -124,8 +127,22 @@ class SBICDataset(CustomDataset):
             # end: subset loading
         else:
             for split in ['train', 'test', 'validation']:
-                df = load_data_original(split=split, label_lookup_path=label_lookup_orig_path, label_hierarchy_path=label_hierarchy_path,
-                                   label_category_path=label_category_path, sel_labels=self.group_names, sel_level='merged', do_aggregate=True)
+                ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
+                df = merge_split(ds, local_dir=local_dir['label_map_orig'])
+
+                # rename target columns
+                df = df.rename(columns={'mean_offensiveYN': 'offensiveYN', 'mean_intentYN': 'intentYN', 'mean_whoTarget': 'whoTarget'})
+
+                # binarize group labels (preprocess label format!)
+                df['standardized_lbl'] = (df['standardized_lbl'].apply(lambda x: ', '.join(map(str, x)) if isinstance(x, (list, tuple, np.ndarray)) else x)
+                                .str.replace(r"[\[\]'\"]", '', regex=True))
+                df, sel_labels = binarize_identity_labels(df, 'standardized_lbl', sel_labels=self.group_names)
+                assert sel_labels == self.group_names
+                
+                if split == 'validation':
+                    split = 'dev'
+                #df = load_data_original(split=split, label_lookup_path=label_lookup_orig_path, label_hierarchy_path=label_hierarchy_path,
+                #                   label_category_path=label_category_path, sel_labels=self.group_names, sel_level='merged', do_aggregate=True)
 
                 text_col = 'post'
                 self._set_split(df=df, split=split, text_col=text_col)

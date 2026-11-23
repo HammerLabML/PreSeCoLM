@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import data_loader
 
-prefix = '../../data/sbic_reannot/' # adapt data is stored elsewhere
+prefix = '../../data/sbic_reannot/' # adapt data if stored elsewhere
 
 local_paths = {
     'data': prefix+'review_full.csv',
@@ -53,3 +53,7 @@ print(labels)
 print(groups)
 print(cw)
 print(gw)
+
+
+# full dataset
+sbic = data_loader.get_dataset('sbic-full', local_dir=local_paths)
