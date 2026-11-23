@@ -223,12 +223,8 @@ def run(config):
     # language models
     openai_models = config["openai_models"]
     huggingface_models = config["huggingface_models"]
-<<<<<<< HEAD
-    model_names = huggingface_models + openai_models
-=======
     sentence_transformer_models = config["sentence_transformer_models"]
     model_names = huggingface_models + openai_models + sentence_transformer_models
->>>>>>> esann26
 
     # dictionary with batch sizes for huggingface models
     with open(config["batch_size_lookup"], 'r') as f:

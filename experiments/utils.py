@@ -31,12 +31,8 @@ SUPPORTED_HUGGINGFACE_MODELS = ["bert-base-uncased", "bert-large-uncased", "dist
                                 "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", "deepseek-ai/deepseek-llm-7b-base", "deepseek-ai/deepseek-llm-7b-chat",
                                 "facebook/bart-base", "facebook/bart-large", "facebook/opt-125m", "facebook/opt-350m", "facebook/opt-1.3b", "facebook/opt-2.7b", "facebook/opt-6.7b",
                                 "google-t5/t5-small", "google-t5/t5-base",
-<<<<<<< HEAD
-                                "xlnet/xlnet-base-cased", "xlnet/xlnet-large-cased"]
-=======
                                 "xlnet/xlnet-base-cased", "xlnet/xlnet-large-cased",
                                 "all-distilroberta-v1", "distiluse-base-multilingual-cased-v1"]
->>>>>>> esann26
 # possible other models (test):
 # "openai-gpt"
 # "xlm-roberta-base", "xlm-roberta-large",
