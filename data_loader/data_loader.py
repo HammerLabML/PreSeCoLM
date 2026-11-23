@@ -27,10 +27,14 @@ def get_dataset(dataset_name, local_dir=None):
         dataset = CrowSPairs()
     elif dataset_name == 'stereoset':
         dataset = StereoSet(option='both')
-    elif dataset_name == 'sbic':
-        dataset = SBICDataset(local_dir=local_dir, option='all')
-    elif dataset_name == 'sbic_offensive':
-        dataset = SBICDataset(local_dir=local_dir, option='offensive')
+    elif dataset_name == 'sbic-full':
+        dataset = SBICDataset(local_dir=local_dir, option='full')
+    elif dataset_name == 'sbic-sorig':
+        dataset = SBICDataset(local_dir=local_dir, option='subset-orig')
+    elif dataset_name == 'sbic-sbalanced':
+        dataset = SBICDataset(local_dir=local_dir, option='subset-balanced')
+    elif dataset_name == 'sbic-sblack':
+        dataset = SBICDataset(local_dir=local_dir, option='subset-black')
     elif dataset_name == 'implicit_hate':
         dataset = ImplicitHate(local_dir=local_dir, option='all')
     elif dataset_name == 'implicit_hate_pos':

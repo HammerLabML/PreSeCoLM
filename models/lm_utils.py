@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 
 # for huggingface models 
 
-def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir, is_sentence_transformer=False, batch_size=None, model_name=None):
+def load_or_compute_embeddings(texts, lm, dataset_name, split, emb_dir, is_sentence_transformer=False, batch_size=None, model_name=None):
     if is_sentence_transformer and batch_size is None:
         print("sentence transformer requires batch size to be specified! choose batch_size=1")
         batch_size = 1
@@ -22,7 +22,10 @@ def load_or_compute_embeddings(texts, lm, dataset, split, emb_dir, is_sentence_t
 
     if '/' in model_name:
         model_name = model_name.replace('/', '_')
-    save_file = (emb_dir+'%s_%s_%s_%s.pickle' % (dataset, split, model_name, pooling))
+    # special case: there are three versions of the SBIC subset with identitcal texts and different labels
+    if 'sbic-s' in dataset_name:
+        dataset_name = 'sbic-s'
+    save_file = (emb_dir+'%s_%s_%s_%s.pickle' % (dataset_name, split, model_name, pooling))
     if os.path.exists(save_file):
         print("load precomputed embeddings for %s set" % split)
         with open(save_file, 'rb') as handle:
@@ -91,8 +94,9 @@ def get_finetuned_model(model_name, dataset_name, batch_size_lookup, n_classes, 
 
 
 # openai models
-
 def get_embeddings(texts, dataset_name, split, embedding_model, emb_dir):
+    if 'sbic-s' in dataset_name:
+        dataset_name = 'sbic-s'
     save_file = (emb_dir+'%s_%s_%s.pickle' % (dataset_name, split, embedding_model))
     if os.path.exists(save_file):
         with open(save_file, 'rb') as handle:

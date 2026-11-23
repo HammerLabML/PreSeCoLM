@@ -10,28 +10,20 @@ import numpy as np
 import datasets
 import re
 
-from .sbic_helper import load_data_original, load_data_aae_annotation_study, load_data_annotation_study, merge_minority_lists, merge_split
+from .sbic_helper import load_data_original, load_data_aae_annotation_study, load_data_annotation_study
 
 
 class SBICDataset(CustomDataset):
 
-    # TODO add options:
-    # all               - load full dataset
-    # subset-orig       - load subset with original labels
-    # subset-balanced   - load subset with labels from study1 (balanced annotator pool)
-    # subset-black      - load subset with labels from study2 (black annotators)
-    # use/ copy the dataloader from SBICLabelQuality repo?
-
     # TODO outside this script
-    # add options to dataloader
-    # make sure that all subsets use the same embedding files, identified by sbic-subset
-    # copy subset embeddings from full dataset (at least for openai)
-    def __init__(self, local_dir = None, option: str = 'all'):
+    # make sure that all subsets use the same embedding files, identified by sbic-subset (all subsets have the same order now)
+    # copy subset embeddings from full dataset (at least for openai; might need to keep HITIds to make the match or use posts from subset-orig version)
+    def __init__(self, local_dir = None, option: str = 'full'):
         super().__init__(local_dir)
 
         self.name = 'sbic'
 
-        alid_options = ['full', 'subset-orig', 'subset-balanced', 'subset-black']
+        valid_options = ['full', 'subset-orig', 'subset-balanced', 'subset-black']
         err_str = (("There are four options for the SBIC dataset: 1) 'full' the full dataset will be loaded from "
                     "huggingface, alternatively a re-annotated subset can be loaded with different annotation sets:"
                     "2) subset-orig uses original labels (predominantly white annotators, many groups labeled), 3) subset-balanced new labels from an ethnicity-balanced"
@@ -48,7 +40,8 @@ class SBICDataset(CustomDataset):
                     'mexican', 'american', 'nationality',
                     'physical disability', 'mental health conditions'
                     ]
-        self.category_names = ['race/ethnicity', 'religion', 'nationality', 'gender/ sexual orientation', 'victims', 'disability', 'health']
+        # could also use these categories as concepts, but need to load on 'category' level instead of 'merged' then
+        # self.category_names = ['race/ethnicity', 'religion', 'nationality', 'gender/ sexual orientation', 'victims', 'disability', 'health']
 
         # full: keep all samples
         # subset-*: subset from annotation study (TODO link)
@@ -62,7 +55,7 @@ class SBICDataset(CustomDataset):
         else:
             self.class_names = ['offense', 'intent', 'group_off'] # 3rd means if a group is targeted
 
-        print("load SBIC with local file: %s" % local_dir)
+        print("load SBIC with option %s and local file: %s" % (option, local_dir))
         self.load(local_dir)
         self.prepare()
 
@@ -78,6 +71,11 @@ class SBICDataset(CustomDataset):
 
     def load(self, local_dir=None):
         assert isinstance(local_dir, dict), "SBIC requires a dictionary of local paths"
+
+        # these local files are required for all options
+        assert 'label_hierarchy' in local_dir.keys() and 'label_category' in local_dir.keys()
+        label_hierarchy_path = local_dir['label_hierarchy']
+        label_category_path = local_dir['label_category']
 
         if 'subset' in self.option:
             key = 'data'
@@ -101,22 +99,23 @@ class SBICDataset(CustomDataset):
                 df = load_data_original(split='test', label_lookup_path=label_lookup_orig_path, label_hierarchy_path=label_hierarchy_path, 
                                         label_category_path=label_category_path, sel_labels=self.group_names, sel_level='merged', do_aggregate=True,
                                         sel_post_ids=post_ids)
+                df = df.sort_values(by='HITId')
                 
             elif self.option == 'subset-balanced':
-                assert 'label_hierarchy' in local_dir.keys() and 'label_category' in local_dir.keys()
-                label_hierarchy_path = local_dir['label_hierarchy']
-                label_category_path = local_dir['label_category']
-
                 df = load_data_annotation_study(data_path=data_path, label_hierarchy_path=label_hierarchy_path, label_category_path=label_category_path, 
                                     sel_labels=self.group_names, sel_level='merged', do_aggregate=True, exclude_flagged_samples=True)
-                post_ids = list(set(df['HITId']))
+                df = df.sort_values(by='HITId')
 
-                # TODO convert group_ref -> group
+                # convert <group>_ref to <group> column
+                df = df.rename(columns={grp+'_ref': grp for grp in self.group_names})
 
             else: # subset-black
                 df = load_data_aae_annotation_study(data_path=data_path, do_aggregate=True, exclude_flagged_samples=True)
-                self.group_names = ['black', 'aae'] 
-                # TODO check actual column names -> map to those above
+                self.group_names = ['black', 'aae']
+                df = df.sort_values(by='HITId')
+
+                # convert B_<lbl> and B_<group>_ref columns
+                df = df.rename(columns={'B_black_ref': 'black', 'B_aae': 'aae', 'B_offense': 'offense', 'B_intent': 'intent', 'B_group_off': 'group_off'})
 
             text_col = 'post' if self.option == 'subset-orig' else 'post_prep'
             self._set_split(df=df, split='test', text_col=text_col)
@@ -127,7 +126,8 @@ class SBICDataset(CustomDataset):
             for split in ['train', 'test', 'validation']:
                 df = load_data_original(split=split, label_lookup_path=label_lookup_orig_path, label_hierarchy_path=label_hierarchy_path,
                                    label_category_path=label_category_path, sel_labels=self.group_names, sel_level='merged', do_aggregate=True)
-                
-                self._set_split(df=df, split='test', text_col=text_col)
+
+                text_col = 'post'
+                self._set_split(df=df, split=split, text_col=text_col)
 
 

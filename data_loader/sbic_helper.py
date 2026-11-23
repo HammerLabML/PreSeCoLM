@@ -251,8 +251,6 @@ def load_data_annotation_study(data_path: str, label_hierarchy_path: str, label_
         Dataset or subset of the dataset according to specified options.
     """ 
     assert sel_level in ['standardized', 'merged', 'category'], "sel_level must be one of the following choices: 'standardized', 'merged', 'category'"
-    if do_aggregate:
-        assert aae_annot_path is not None
 
     # load data and label hierarchy mappings
     df = pd.read_csv(data_path, sep=';')
@@ -355,23 +353,26 @@ def load_data_annotation_study(data_path: str, label_hierarchy_path: str, label_
         # annotations from first study
         df_agg = aggregate_annotations(df_bin, target_columns=numerical_label_columns, sample_id_col='sample_id', keep_columns=['post_prep', 'HITId'])
 
-        # annotations from aae/ black study
-        df_aae = pd.read_csv(aae_annot_path, sep=';')
-        df_aae = set_target_labels_study2(df_aae)
-        grp_cols = ['B_black_ref', 'B_other_ref',  'B_black_off', 'B_other_off', 'B_unc_ref', 'B_unc_off']
-        for col in grp_cols:
-            df_aae[col] = df_aae[col].fillna(0).astype(int)
+        if aae_annot_path is not None:
+            # annotations from aae/ black study
+            print("add aae data")
 
-        aae_num_cols = ['B_offense', 'B_intent', 'B_group_ref', 'B_group_off', 'B_black_ref', 'B_other_ref',  'B_black_off', 'B_other_off', 
-                    'B_unc_ref', 'B_unc_off', 'AAE (auto)', 'post_prep_aae', 'post_prep_tokendiff', 'B_aae', 'B_aae_imitate', 'B_aae_unc']
-        df_agg_aae = aggregate_annotations(df_aae, target_columns=aae_num_cols, sample_id_col='sample_id', keep_columns=['post_prep', 'HITId'])
+            df_aae = pd.read_csv(aae_annot_path, sep=';')
+            df_aae = set_target_labels_study2(df_aae)
+            grp_cols = ['B_black_ref', 'B_other_ref',  'B_black_off', 'B_other_off', 'B_unc_ref', 'B_unc_off']
+            for col in grp_cols:
+                df_aae[col] = df_aae[col].fillna(0).astype(int)
 
-        # merge both
-        df_agg = df_agg.merge(
-            df_agg_aae[['sample_id']+aae_num_cols], 
-            on='sample_id', 
-            how='left'
-        )
+            aae_num_cols = ['B_offense', 'B_intent', 'B_group_ref', 'B_group_off', 'B_black_ref', 'B_other_ref',  'B_black_off', 'B_other_off', 
+                        'B_unc_ref', 'B_unc_off', 'AAE (auto)', 'post_prep_aae', 'post_prep_tokendiff', 'B_aae', 'B_aae_imitate', 'B_aae_unc']
+            df_agg_aae = aggregate_annotations(df_aae, target_columns=aae_num_cols, sample_id_col='sample_id', keep_columns=['post_prep', 'HITId'])
+
+            # merge both
+            df_agg = df_agg.merge(
+                df_agg_aae[['sample_id']+aae_num_cols], 
+                on='sample_id', 
+                how='left'
+            )
 
         return df_agg
     else:
@@ -575,4 +576,5 @@ def load_both_datasets(new_data_path: str, label_lookup_orig_path: str, label_hi
                                  label_category_path=label_category_path, sel_labels=sel_labels, sel_level=sel_level,
                                  do_aggregate=do_aggregate, sel_post_ids=post_ids)
     return df_new, df_orig
+
 
