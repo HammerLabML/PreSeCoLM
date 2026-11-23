@@ -1,0 +1,6 @@
+{
+    "data": "../../data/sbic_reannot/review_full.csv", 
+    "label_map_orig": "../../data/sbic_reannot/freetext_label_lookup_original.csv", 
+    "label_hierarchy": "../../data/sbic_reannot/label_hierarchy.csv", 
+    "label_category": "../../data/sbic_reannot/label_categories.csv"
+}
