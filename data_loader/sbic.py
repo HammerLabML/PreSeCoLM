@@ -3,6 +3,7 @@ import pandas as pd
 import datasets
 import numpy as np
 import itertools
+import json
 
 import pandas as pd
 import numpy as np
@@ -14,7 +15,7 @@ from .sbic_helper import load_data_original, load_data_aae_annotation_study, loa
 
 
 class SBICDataset(CustomDataset):
-    
+
     def __init__(self, local_dir = None, option: str = 'full'):
         super().__init__(local_dir)
 
@@ -70,22 +71,25 @@ class SBICDataset(CustomDataset):
         self.ids[split] = list(df.loc[:, 'HITId'])
 
 
-    def load(self, local_dir=None):
-        assert isinstance(local_dir, dict), "SBIC requires a dictionary of local paths"
+    def load(self, local_dir: str = None):
+        assert isinstance(local_dir, str) and '.json' in local_dir, "local dir should point to a .json file with all relevant paths"
+        
+        with open(local_dir, 'rb') as file:
+            path_lookup = json.load(file)
 
         # these local files are required for all options
-        assert 'label_hierarchy' in local_dir.keys() and 'label_category' in local_dir.keys()
-        label_hierarchy_path = local_dir['label_hierarchy']
-        label_category_path = local_dir['label_category']
+        assert 'label_hierarchy' in path_lookup.keys() and 'label_category' in path_lookup.keys()
+        label_hierarchy_path = path_lookup['label_hierarchy']
+        label_category_path = path_lookup['label_category']
 
         if 'subset' in self.option:
             key = 'data'
-            assert key in local_dir.keys(), "for subset option require at least the path to the data using key: "+key
-            data_path = local_dir[key]
+            assert key in path_lookup.keys(), "for subset option require at least the path to the data using key: "+key
+            data_path = path_lookup[key]
         if self.option == 'subset-orig' or self.option == 'full':
             key = 'label_map_orig'
-            assert key in local_dir.keys(), "if loading original labels, path to label mapping for original labels is required using key: "+key
-            label_lookup_orig_path = local_dir[key]   
+            assert key in path_lookup.keys(), "if loading original labels, path to label mapping for original labels is required using key: "+key
+            label_lookup_orig_path = path_lookup[key]   
 
         if 'subset' in self.option:
             # start: subset loading
@@ -126,7 +130,7 @@ class SBICDataset(CustomDataset):
         else:
             for split in ['train', 'test', 'validation']:
                 ds = datasets.load_dataset("allenai/social_bias_frames", split=split, trust_remote_code=True)
-                df = merge_split(ds, local_dir=local_dir['label_map_orig'])
+                df = merge_split(ds, local_dir=path_lookup['label_map_orig'])
 
                 # rename target columns
                 df = df.rename(columns={'mean_offensiveYN': 'offensiveYN', 'mean_intentYN': 'intentYN', 'mean_whoTarget': 'whoTarget'})
