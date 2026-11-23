@@ -1,4 +1,4 @@
-from .dataset import CustomDataset, label2onehot
+from .dataset import CustomDataset, binarize_labels
 from datasets import load_dataset
 import numpy as np
 from sklearn.utils import shuffle
@@ -30,7 +30,7 @@ class TwitterAAE(CustomDataset):
         self.data['test'] = ds['test']['tweet']
         # self.data['test'] = ds_aa['test']['tweet'] + ds_white['test']['tweet']
         self.labels['test'] = - np.ones((2*n_per_group, 1), dtype=int)
-        self.protected_groups['test'] = label2onehot([0 for i in range(n_per_group)] + [1 for i in range(n_per_group)])
+        self.protected_groups['test'] = binarize_labels([0 for i in range(n_per_group)] + [1 for i in range(n_per_group)])
 
         self.data['test'], self.protected_groups['test'] = shuffle(self.data['test'],
                                                                    self.protected_groups['test'],

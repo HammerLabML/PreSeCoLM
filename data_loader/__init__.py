@@ -1,5 +1,5 @@
 from .data_loader import get_dataset
-from .dataset import CustomDataset, label2onehot
+from .dataset import CustomDataset, binarize_labels
 from .stereoset import StereoSet
 from .bios import BiosDataset
 from .crowspairs import CrowSPairs

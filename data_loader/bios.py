@@ -1,6 +1,6 @@
 import numpy as np
 from datasets import Dataset, DatasetDict, load_dataset
-from .dataset import CustomDataset, label2onehot
+from .dataset import CustomDataset, binarize_labels
 import pickle
 
 def filter_bios_dataset(dataset: dict, classes: list, keys_to_copy: list, single_label=True, review_only=True,
@@ -79,7 +79,7 @@ class BiosDataset(CustomDataset):
             for split in ['train', 'test', 'dev']:
                 self.data[split] = ds[split]['hard_text']
                 self.labels[split] = np.array(ds[split]['label'])
-                self.protected_groups[split] = label2onehot(np.array(ds[split]['gender']))
+                self.protected_groups[split] = binarize_labels(np.array(ds[split]['gender']))
 
         else:  # unsupervised
             ds = load_dataset("LabHC/bias_in_bios")
@@ -95,5 +95,5 @@ class BiosDataset(CustomDataset):
             for split in ['train', 'test', 'dev']:
                 self.data[split] = ds[split]['hard_text']
                 self.labels[split] = np.array(ds[split]['profession']).reshape(-1, 1)
-                self.protected_groups[split] = label2onehot(np.array(ds[split]['gender']))
+                self.protected_groups[split] = binarize_labels(np.array(ds[split]['gender']))
 

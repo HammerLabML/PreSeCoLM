@@ -5,12 +5,12 @@ import math
 import itertools
 
 
-def is_onehot(y):
+def is_binary(y):
     return type(y) is np.ndarray and y.ndim >= 2 and y.shape[1] > 1 and np.min(y) == 0 and np.max(y) == 1
 
 
-def label2onehot(y, minv=0, maxv=None):
-    if is_onehot(y):
+def binarize_labels(y, minv=0, maxv=None):
+    if is_binary(y):
         return y
     if type(y) is list:
         y = np.asarray(y, dtype='int')
@@ -165,7 +165,7 @@ class CustomDataset:
 
         # onehot encoded group labels
         for split in self.splits:
-            assert is_onehot(self.protected_groups[split]), ("protected group labels are not onehot-encoded for "
+            assert is_binary(self.protected_groups[split]), ("protected group labels are not binarized for "
                                                              "split %s") % split
 
     def load(self):
