@@ -75,8 +75,8 @@ def train_cbm_train_test(emb_train, y_train, g_train, emb_test, y_test, g_test, 
         y_test = y_test.flatten().astype('int')
 
     # prepare concept labels
-    c_train = data_loader.label2onehot(g_train)
-    c_test = data_loader.label2onehot(g_test)
+    c_train = data_loader.binarize_labels(g_train)
+    c_test = data_loader.binarize_labels(g_test)
 
     # init model params
     model_params = {'input_size': emb_train.shape[1], 'output_size': n_classes, 'n_learned_concepts': c_train.shape[1],
@@ -189,16 +189,16 @@ def eval_cbm_on_test_split(emb_test, g_test, checkpoint_file, params_file, group
                                    concept_criterion=torch.nn.BCEWithLogitsLoss, lr=1e-4, lambda_concept=0.5,
                                    concept_weights=None)
 
-    # concepts encoded as onehot
+    # concepts as binary labels
     if len(groups_test) == 1:
         assert np.all((g_test == 0) | (g_test == 1)), "got only 1 label, but g_test contains multi-class label!"
         c_test = g_test
         n_concepts = 1
     else:
-        c_test = data_loader.label2onehot(g_test)
+        c_test = data_loader.binarize_labels(g_test)
         n_concepts = c_test.shape[1]
 
-    # with onehot encoding number of test groups and shape of test concepts should match
+    # with binary multi-label modeling number of test groups and shape of test concepts should match
     # the number of training groups might be larger
     assert n_concepts <= len(groups_train) and n_concepts == len(groups_test), ("number of concepts (%i) does not match"
                                                                                 " number of train (%i) /test groups "
@@ -216,13 +216,13 @@ def eval_cbm_on_test_split(emb_test, g_test, checkpoint_file, params_file, group
 
     # handle different dimensionality of test and predicted concepts
     if not utils.is1D(c_test) and utils.is1D(c_pred):
-        print("convert 1d prediction to onehot")
-        c_pred = data_loader.label2onehot(c_pred, minv=int(np.min(c_test)), maxv=int(np.max(c_test)))
+        print("convert 1d prediction to binary multi-label format")
+        c_pred = data_loader.binarize_labels(c_pred, minv=int(np.min(c_test)), maxv=int(np.max(c_test)))
         concepts = np.hstack([-concepts, concepts])
         assert len(groups_train) == 2
     if utils.is1D(c_test) and not utils.is1D(c_pred):
-        print("convert 1d test labels to onehot")
-        c_test = data_loader.label2onehot(c_test)
+        print("convert 1d test labels to binary multi-label format")
+        c_test = data_loader.binarize_labels(c_test)
 
     # align labels
     c_test, c_pred, concepts, groups_test, groups_train = utils.align_labels(c_test, c_pred, concepts, groups_test,

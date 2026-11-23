@@ -128,12 +128,12 @@ def eval_cav_on_test_split(file_name, emb_test, g_test, groups_train, groups_tes
     # real valued predictions changed to [-pred, pred]
     if not utils.is1D(g_test) and utils.is1D(g_pred):
         print("convert 1d prediction to onehot")
-        g_pred = data_loader.label2onehot(g_pred, minv=int(np.min(g_test)), maxv=int(np.max(g_test)))
+        g_pred = data_loader.binarize_labels(g_pred, minv=int(np.min(g_test)), maxv=int(np.max(g_test)))
         pred = np.hstack([-pred, pred])
         assert len(groups_train) == 2
     if utils.is1D(g_test) and not utils.is1D(g_pred):
         print("convert 1d test labels to onehot")
-        g_test = data_loader.label2onehot(g_test)
+        g_test = data_loader.binarize_labels(g_test)
         assert len(groups_test) == 2
     if utils.is1D(g_test) and utils.is1D(g_pred):
         if len(groups_train) == 2:
