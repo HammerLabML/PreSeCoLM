@@ -197,7 +197,7 @@ def evaluate_bias_space(defining_term_dict, dataset_test, model, pooling, batch_
 
     if utils.is1D(g_test):
         print("convert 1d test labels to onehot")
-        g_test = data_loader.label2onehot(g_test)
+        g_test = data_loader.binarize_labels(g_test)
         assert g_test.shape[1] == len(sel_groups_eval), (
                     "shape mismatch %i vs. %i" % (g_test.shape[1], len(sel_groups_eval)))
 

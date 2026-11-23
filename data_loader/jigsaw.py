@@ -1,4 +1,4 @@
-from .dataset import CustomDataset, label2onehot, is_onehot
+from .dataset import CustomDataset, binarize_labels
 from datasets import load_dataset
 import numpy as np
 
@@ -70,9 +70,9 @@ class JigsawBias(CustomDataset):
             self.labels['test'] = (np.asarray(ds_test[target]) > 0.5).astype(float)
 
             # convert labels to onehot for BCE (which allows class weights)
-            self.labels['train'] = label2onehot(self.labels['train'])
-            self.labels['dev'] = label2onehot(self.labels['dev'])
-            self.labels['test'] = label2onehot(self.labels['test'])
+            self.labels['train'] = binarize_labels(self.labels['train'])
+            self.labels['dev'] = binarize_labels(self.labels['dev'])
+            self.labels['test'] = binarize_labels(self.labels['test'])
             self.class_names = ['not toxic', 'toxic']  # assumes this is the only 1class scenario
         else:
             self.labels['train'] = np.zeros((len(ds_train), len(self.class_names)))
