@@ -256,7 +256,7 @@ def run(config):
             del lm
         elif model in sentence_transformer_models:
             lm = SentenceTransformer(model)
-            lm_emb_size = lm[1].word_embedding_dimension
+            lm_emb_size = lm.get_embedding_dimension()
             lm = lm.to('cpu')
             del lm
         else:  # openai model
