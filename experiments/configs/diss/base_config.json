@@ -49,7 +49,7 @@
   ],
   "embedding_dir": "../embeddings/",
   "batch_size_lookup": "experiments/configs/batch_size_lookup_A40.json",
-  "results_path": "experiments/results/diss/linearity",
+  "results_path": "experiments/results/diss/linearity.csv",
   "max_epochs": 50,
   "datasets": [
     {"name": "sbic-full", "local_dir": "experiments/configs/sbic_paths.json"},

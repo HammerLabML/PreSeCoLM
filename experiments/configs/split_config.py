@@ -33,9 +33,9 @@ def split_config(config: dict, n: int, sep: str = "_") -> list[dict]:
     # drop jobs that ended up with no models (when n > total number of models)
     subconfigs = [s for s in subconfigs if any(s.get(k) for k in MODEL_KEYS)]
 
-    base_path = config["results_path"].rstrip("/")
+    base_path = config["results_path"].rstrip("/").replace(".csv","")
     for i, sub in enumerate(subconfigs, start=1):
-        sub["results_path"] = f"{base_path}{sep}{i}"
+        sub["results_path"] = f"{base_path}{sep}{i}.csv"
     return subconfigs
 
 
